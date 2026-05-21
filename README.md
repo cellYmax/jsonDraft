@@ -17,6 +17,15 @@ pnpm install
 pnpm run tauri dev
 ```
 
+## Specs
+
+- [Docs index](./docs/README.md)
+- [Product spec](./docs/PRODUCT_SPEC.md)
+- [Architecture spec](./docs/ARCHITECTURE_SPEC.md)
+- [Module spec](./docs/MODULE_SPEC.md)
+- [Test spec](./docs/TEST_SPEC.md)
+- [AI coding guide](./docs/AI_CODING_GUIDE.md)
+
 ## Checks
 
 ```bash
