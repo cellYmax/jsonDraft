@@ -1,0 +1,38 @@
+[
+  {
+    "orderId": "ord_9001",
+    "customerId": "cus_10001",
+    "status": "paid",
+    "total": 149.97,
+    "currency": "USD",
+    "items": [
+      {
+        "sku": "desk-lamp-matte",
+        "name": "Matte Desk Lamp",
+        "quantity": 1,
+        "unitPrice": 79.99
+      },
+      {
+        "sku": "notebook-grid-a5",
+        "name": "Grid Notebook A5",
+        "quantity": 2,
+        "unitPrice": 34.99
+      }
+    ]
+  },
+  {
+    "orderId": "ord_9002",
+    "customerId": "cus_10002",
+    "status": "pending",
+    "total": 42,
+    "currency": "USD",
+    "items": [
+      {
+        "sku": "cable-usbc-2m",
+        "name": "USB-C Cable 2m",
+        "quantity": 3,
+        "unitPrice": 14
+      }
+    ]
+  }
+]

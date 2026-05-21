@@ -1,0 +1,28 @@
+{
+  "id": "cus_10001",
+  "name": "Avery Chen",
+  "email": "avery.chen@example.com",
+  "status": "active",
+  "plan": {
+    "name": "Pro",
+    "renewalDate": "2026-06-15",
+    "limits": {
+      "projects": 24,
+      "storageGb": 128,
+      "teamMembers": 8
+    }
+  },
+  "preferences": {
+    "theme": "system",
+    "notifications": {
+      "email": true,
+      "desktop": false,
+      "weeklyDigest": true
+    }
+  },
+  "tags": ["beta-user", "design-team", "priority"],
+  "metadata": {
+    "createdAt": "2025-11-03T09:20:00Z",
+    "lastLoginAt": "2026-05-16T14:35:21Z"
+  }
+}

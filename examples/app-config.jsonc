@@ -1,0 +1,15 @@
+{
+  // JSONC demo: comments and trailing commas are valid in JSONC mode.
+  "appName": "jsonDraft",
+  "environment": "local",
+  "editor": {
+    "tabSize": 2,
+    "wordWrap": true,
+    "autoFormatOnSave": false,
+  },
+  "features": {
+    "schemaValidation": false,
+    "jsoncMode": true,
+    "historyPanel": false,
+  },
+}

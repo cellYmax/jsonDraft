@@ -1,0 +1,10 @@
+{
+  "name": "Broken sample",
+  "items": [
+    {
+      "id": 1,
+      "label": "Missing comma after this string"
+      "enabled": true
+    }
+  ]
+}

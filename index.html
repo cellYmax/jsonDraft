@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>jsonDraft</title>
+    <script>
+      function showBootError(error) {
+        var root = document.getElementById("root");
+        if (!root) return;
+        var message =
+          error && error.message ? error.message : error ? String(error) : "";
+        root.innerHTML =
+          '<main style="height:100vh;padding:48px;display:flex;flex-direction:column;justify-content:center;background:#fff8f6;color:#33211f;font-family:system-ui,sans-serif">' +
+          '<h1 style="margin:0 0 10px;color:#b42318;font-size:22px">jsonDraft 启动失败</h1>' +
+          '<p style="margin:0;font:13px/20px monospace;overflow-wrap:anywhere"></p>' +
+          "</main>";
+        root.querySelector("p").textContent = message;
+      }
+
+      window.addEventListener("error", function (event) {
+        showBootError(event.error || event.message);
+      });
+
+      window.addEventListener("unhandledrejection", function (event) {
+        showBootError(event.reason);
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
