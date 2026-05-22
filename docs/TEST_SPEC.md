@@ -136,11 +136,11 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 相同基本类型返回空数组。
 - 不同基本类型返回单条根级 `changed`。
 - 对象 vs 数组等异类型返回单条根级 `changed`，不深入。
-- 对象按左序优先 + 右侧新增遍历。
-- 嵌套对象按 `$.user.age` 路径定位。
-- 数组按下标对齐，长度不同时多余项视为 added。
+- 对象按左序优先 + 右侧新增遍历，输出条目同时携带 `path` 与 `segments`。
+- 嵌套对象按 `$.user.age` 路径定位，`segments` 为 `["user", "age"]`。
+- 数组按下标对齐，长度不同时多余项视为 added，`segments` 为 `[index]`。
 - `null` vs 缺失视为 `removed`。
-- 非 dot-safe 键使用 `["..."]`。
+- 非 dot-safe 键使用 `["..."]`，`segments` 仍是原 key 字符串。
 - 键序不同但值结构相同视为相等。
 - `0` vs `-0` 视为 `changed`。
 - `summarizeDiff` 按 kind 计数，`unchanged` 不计入。
@@ -203,6 +203,8 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 两侧都合法时按结构化方式列出差异；改动键序但值结构一致显示“两侧 JSON 完全一致。”。
 - 数组按下标对齐；对象 key 顺序不影响差异。
 - 含特殊字符的键（如 `a-b`）路径形式为 `$["a-b"]`。
+- 滚动任一 Monaco 编辑器，另一侧立即跟随；不会出现来回抖动。
+- 点击 diff 行：两侧 Monaco 都把对应节点 reveal 到中心并选中；`added` 仅在右侧定位，`removed` 仅在左侧定位。
 
 ### 保存与原子写
 

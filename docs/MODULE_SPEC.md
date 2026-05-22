@@ -213,9 +213,11 @@ type ParseResult = {
 
 ```ts
 type DiffKind = "added" | "removed" | "changed" | "unchanged";
+type DiffSegment = string | number;
 
 type DiffEntry = {
-  path: string;       // 形如 "$.users[0].name" 或 '$["a-b"]'
+  path: string;            // 形如 "$.users[0].name" 或 '$["a-b"]'
+  segments: DiffSegment[]; // 与 path 等价的结构化段，可直接喂给 jsonc-parser 的 findNodeAtLocation
   kind: DiffKind;
   leftValue: unknown;
   rightValue: unknown;
@@ -301,7 +303,7 @@ type DiffEntry = {
 - `Sidebar`：纯装配组件，把 props 分发到下面的子面板。
 - `HealthPanel` / `IssuePanel` / `SummaryPanel` / `CurrentPathPanel` / `CopyPanel` / `RecentFilesPanel`：单一职责面板。
 - `TreePanel`：自管 `collapsed`、`search` 和 DOM `Map`；监听 `currentPath` 变化触发 `scrollIntoView({ block: "nearest" })`。
-- `DiffPanel`：中心区 Diff 面板。自管两个 `<textarea>` 输入、JSONC 容错解析（用 `parse` + `allowTrailingComma`），调用 `diffJson` / `summarizeDiff` 渲染差异列表；`onClose` 由 App 传入。
+- `DiffPanel`：中心区 Diff 面板。两侧使用独立 Monaco 编辑器（`path` 分别为 `diff://left.jsonc` / `diff://right.jsonc`）；左右垂直/水平滚动通过 `onDidScrollChange` 互相同步，并用 `isSyncing` ref 防递归。差异列表中点击任一行调用 `findNodeAtLocation(segments)` 在两侧分别 `revealRangeInCenter` + `setSelection`，对 `added`/`removed` 仅在含值的一侧定位。`onClose` 由 App 传入。
 
 ## Hooks (`src/hooks/`)
 

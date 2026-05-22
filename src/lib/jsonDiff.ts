@@ -1,13 +1,16 @@
 export type DiffKind = "added" | "removed" | "changed" | "unchanged";
 
+export type DiffSegment = string | number;
+
 export type DiffEntry = {
   path: string;
+  segments: DiffSegment[];
   kind: DiffKind;
   leftValue: unknown;
   rightValue: unknown;
 };
 
-type Segment = string | number;
+type Segment = DiffSegment;
 
 const ROOT_PATH = "$";
 
@@ -55,6 +58,7 @@ function walk(
   if (leftKind === "missing" && rightKind !== "missing") {
     entries.push({
       path: pathFromSegments(segments),
+      segments: [...segments],
       kind: "added",
       leftValue: undefined,
       rightValue: right,
@@ -65,6 +69,7 @@ function walk(
   if (leftKind !== "missing" && rightKind === "missing") {
     entries.push({
       path: pathFromSegments(segments),
+      segments: [...segments],
       kind: "removed",
       leftValue: left,
       rightValue: undefined,
@@ -89,6 +94,7 @@ function walk(
 
   entries.push({
     path: pathFromSegments(segments),
+    segments: [...segments],
     kind: "changed",
     leftValue: left,
     rightValue: right,

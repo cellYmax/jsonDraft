@@ -10,7 +10,13 @@ describe("diffJson", () => {
 
   it("reports a single root change for primitive vs primitive", () => {
     expect(diffJson(1, 2)).toEqual([
-      { path: "$", kind: "changed", leftValue: 1, rightValue: 2 },
+      {
+        path: "$",
+        segments: [],
+        kind: "changed",
+        leftValue: 1,
+        rightValue: 2,
+      },
     ]);
   });
 
@@ -18,6 +24,7 @@ describe("diffJson", () => {
     expect(diffJson({ a: 1 }, [1, 2])).toEqual([
       {
         path: "$",
+        segments: [],
         kind: "changed",
         leftValue: { a: 1 },
         rightValue: [1, 2],
@@ -28,8 +35,20 @@ describe("diffJson", () => {
   it("walks object keys in left-then-right order", () => {
     const result = diffJson({ a: 1, b: 2 }, { a: 1, c: 3 });
     expect(result).toEqual([
-      { path: "$.b", kind: "removed", leftValue: 2, rightValue: undefined },
-      { path: "$.c", kind: "added", leftValue: undefined, rightValue: 3 },
+      {
+        path: "$.b",
+        segments: ["b"],
+        kind: "removed",
+        leftValue: 2,
+        rightValue: undefined,
+      },
+      {
+        path: "$.c",
+        segments: ["c"],
+        kind: "added",
+        leftValue: undefined,
+        rightValue: 3,
+      },
     ]);
   });
 
@@ -39,29 +58,59 @@ describe("diffJson", () => {
       { user: { name: "Alice", age: 31 } },
     );
     expect(result).toEqual([
-      { path: "$.user.age", kind: "changed", leftValue: 30, rightValue: 31 },
+      {
+        path: "$.user.age",
+        segments: ["user", "age"],
+        kind: "changed",
+        leftValue: 30,
+        rightValue: 31,
+      },
     ]);
   });
 
   it("aligns arrays by index", () => {
     const result = diffJson([1, 2, 3], [1, 4, 3, 5]);
     expect(result).toEqual([
-      { path: "$[1]", kind: "changed", leftValue: 2, rightValue: 4 },
-      { path: "$[3]", kind: "added", leftValue: undefined, rightValue: 5 },
+      {
+        path: "$[1]",
+        segments: [1],
+        kind: "changed",
+        leftValue: 2,
+        rightValue: 4,
+      },
+      {
+        path: "$[3]",
+        segments: [3],
+        kind: "added",
+        leftValue: undefined,
+        rightValue: 5,
+      },
     ]);
   });
 
   it("treats null and missing as different", () => {
     const result = diffJson({ a: null }, {});
     expect(result).toEqual([
-      { path: "$.a", kind: "removed", leftValue: null, rightValue: undefined },
+      {
+        path: "$.a",
+        segments: ["a"],
+        kind: "removed",
+        leftValue: null,
+        rightValue: undefined,
+      },
     ]);
   });
 
   it("quotes path segments that are not dot-safe", () => {
     const result = diffJson({ "a-b": 1 }, { "a-b": 2 });
     expect(result).toEqual([
-      { path: '$["a-b"]', kind: "changed", leftValue: 1, rightValue: 2 },
+      {
+        path: '$["a-b"]',
+        segments: ["a-b"],
+        kind: "changed",
+        leftValue: 1,
+        rightValue: 2,
+      },
     ]);
   });
 
@@ -74,7 +123,13 @@ describe("diffJson", () => {
   it("differentiates 0 from -0 only via the changed kind", () => {
     expect(diffJson(0, 0)).toEqual([]);
     expect(diffJson(-0, 0)).toEqual([
-      { path: "$", kind: "changed", leftValue: -0, rightValue: 0 },
+      {
+        path: "$",
+        segments: [],
+        kind: "changed",
+        leftValue: -0,
+        rightValue: 0,
+      },
     ]);
   });
 });
@@ -82,11 +137,41 @@ describe("diffJson", () => {
 describe("summarizeDiff", () => {
   it("counts entries by kind and ignores unchanged", () => {
     const summary = summarizeDiff([
-      { path: "$.a", kind: "added", leftValue: undefined, rightValue: 1 },
-      { path: "$.b", kind: "removed", leftValue: 2, rightValue: undefined },
-      { path: "$.c", kind: "changed", leftValue: 3, rightValue: 4 },
-      { path: "$.d", kind: "changed", leftValue: 5, rightValue: 6 },
-      { path: "$.e", kind: "unchanged", leftValue: 7, rightValue: 7 },
+      {
+        path: "$.a",
+        segments: ["a"],
+        kind: "added",
+        leftValue: undefined,
+        rightValue: 1,
+      },
+      {
+        path: "$.b",
+        segments: ["b"],
+        kind: "removed",
+        leftValue: 2,
+        rightValue: undefined,
+      },
+      {
+        path: "$.c",
+        segments: ["c"],
+        kind: "changed",
+        leftValue: 3,
+        rightValue: 4,
+      },
+      {
+        path: "$.d",
+        segments: ["d"],
+        kind: "changed",
+        leftValue: 5,
+        rightValue: 6,
+      },
+      {
+        path: "$.e",
+        segments: ["e"],
+        kind: "unchanged",
+        leftValue: 7,
+        rightValue: 7,
+      },
     ]);
 
     expect(summary).toEqual({ added: 1, removed: 1, changed: 2 });

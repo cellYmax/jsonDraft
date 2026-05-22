@@ -1,11 +1,19 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Editor, { type OnMount } from "@monaco-editor/react";
+import type * as Monaco from "monaco-editor";
 import { ArrowLeftRight, X } from "lucide-react";
-import { ParseError, parse } from "jsonc-parser";
+import {
+  ParseError,
+  findNodeAtLocation,
+  parse,
+  parseTree,
+} from "jsonc-parser";
 import {
   diffJson,
   summarizeDiff,
   type DiffEntry,
   type DiffKind,
+  type DiffSegment,
 } from "../lib/jsonDiff";
 
 const KIND_LABELS: Record<DiffKind, string> = {
@@ -13,12 +21,6 @@ const KIND_LABELS: Record<DiffKind, string> = {
   removed: "删除",
   changed: "变更",
   unchanged: "相同",
-};
-
-type DiffPanelProps = {
-  initialLeft?: string;
-  initialRight?: string;
-  onClose: () => void;
 };
 
 type ParseAttempt =
@@ -30,6 +32,28 @@ const PARSE_OPTIONS = {
   disallowComments: false,
 };
 
+const editorOptions: Monaco.editor.IStandaloneEditorConstructionOptions = {
+  automaticLayout: true,
+  fontFamily: "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace",
+  fontLigatures: false,
+  fontSize: 13,
+  lineHeight: 20,
+  minimap: { enabled: false },
+  padding: { top: 8, bottom: 8 },
+  renderLineHighlight: "gutter",
+  scrollBeyondLastLine: false,
+  tabSize: 2,
+  wordWrap: "on",
+};
+
+type DiffPanelProps = {
+  initialLeft?: string;
+  initialRight?: string;
+  onClose: () => void;
+};
+
+type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
+
 export function DiffPanel({
   initialLeft = "",
   initialRight = "",
@@ -37,6 +61,10 @@ export function DiffPanel({
 }: DiffPanelProps) {
   const [left, setLeft] = useState(initialLeft);
   const [right, setRight] = useState(initialRight);
+
+  const leftEditor = useRef<EditorInstance | null>(null);
+  const rightEditor = useRef<EditorInstance | null>(null);
+  const isSyncing = useRef(false);
 
   const leftParse = useMemo(() => parseInput(left), [left]);
   const rightParse = useMemo(() => parseInput(right), [right]);
@@ -53,10 +81,63 @@ export function DiffPanel({
     [result],
   );
 
-  const swap = () => {
+  const swap = useCallback(() => {
     setLeft(right);
     setRight(left);
+  }, [left, right]);
+
+  const wireScrollSync = useCallback(
+    (source: EditorInstance, target: EditorInstance) => {
+      return source.onDidScrollChange((event) => {
+        if (isSyncing.current) {
+          return;
+        }
+        isSyncing.current = true;
+        try {
+          target.setScrollPosition(
+            { scrollTop: event.scrollTop, scrollLeft: event.scrollLeft },
+            1, // ScrollType.Immediate
+          );
+        } finally {
+          isSyncing.current = false;
+        }
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const a = leftEditor.current;
+    const b = rightEditor.current;
+    if (!a || !b) {
+      return;
+    }
+    const leftDispose = wireScrollSync(a, b);
+    const rightDispose = wireScrollSync(b, a);
+    return () => {
+      leftDispose.dispose();
+      rightDispose.dispose();
+    };
+  }, [wireScrollSync, left, right]);
+
+  const onLeftMount: OnMount = (editor) => {
+    leftEditor.current = editor;
   };
+
+  const onRightMount: OnMount = (editor) => {
+    rightEditor.current = editor;
+  };
+
+  const focusEntry = useCallback((entry: DiffEntry) => {
+    revealEntrySide(leftEditor.current, left, entry.segments, entry.kind, "left");
+    revealEntrySide(
+      rightEditor.current,
+      right,
+      entry.segments,
+      entry.kind,
+      "right",
+    );
+  }, [left, right]);
 
   return (
     <section className="diff-panel" aria-label="JSON Diff">
@@ -92,12 +173,16 @@ export function DiffPanel({
           value={left}
           onChange={setLeft}
           parse={leftParse}
+          editorPath="diff://left.jsonc"
+          onMount={onLeftMount}
         />
         <DiffInputArea
           label="右侧"
           value={right}
           onChange={setRight}
           parse={rightParse}
+          editorPath="diff://right.jsonc"
+          onMount={onRightMount}
         />
       </div>
 
@@ -110,7 +195,14 @@ export function DiffPanel({
           <ul className="diff-list">
             {result.map((entry, index) => (
               <li key={`${entry.path}-${index}`}>
-                <DiffRow entry={entry} />
+                <button
+                  type="button"
+                  className="diff-row-button"
+                  onClick={() => focusEntry(entry)}
+                  title="跳转到两侧对应位置"
+                >
+                  <DiffRow entry={entry} />
+                </button>
               </li>
             ))}
           </ul>
@@ -125,11 +217,20 @@ type DiffInputAreaProps = {
   value: string;
   onChange: (value: string) => void;
   parse: ParseAttempt;
+  editorPath: string;
+  onMount: OnMount;
 };
 
-function DiffInputArea({ label, value, onChange, parse }: DiffInputAreaProps) {
+function DiffInputArea({
+  label,
+  value,
+  onChange,
+  parse,
+  editorPath,
+  onMount,
+}: DiffInputAreaProps) {
   return (
-    <label className="diff-input">
+    <section className="diff-input">
       <div className="diff-input-header">
         <span>{label}</span>
         {parse.ok ? (
@@ -140,13 +241,19 @@ function DiffInputArea({ label, value, onChange, parse }: DiffInputAreaProps) {
           </span>
         )}
       </div>
-      <textarea
-        spellCheck={false}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder="粘贴或输入 JSON / JSONC"
-      />
-    </label>
+      <div className="diff-input-editor">
+        <Editor
+          height="100%"
+          language="json"
+          onChange={(next) => onChange(next ?? "")}
+          onMount={onMount}
+          options={editorOptions}
+          path={editorPath}
+          theme="vs"
+          value={value}
+        />
+      </div>
+    </section>
   );
 }
 
@@ -192,4 +299,57 @@ function previewValue(value: unknown): string {
   } catch {
     return String(value);
   }
+}
+
+function revealEntrySide(
+  editor: EditorInstance | null,
+  source: string,
+  segments: DiffSegment[],
+  kind: DiffKind,
+  side: "left" | "right",
+) {
+  if (!editor) {
+    return;
+  }
+
+  if (
+    (kind === "added" && side === "left") ||
+    (kind === "removed" && side === "right")
+  ) {
+    return;
+  }
+
+  const errors: ParseError[] = [];
+  const tree = parseTree(source, errors, PARSE_OPTIONS);
+  if (!tree) {
+    return;
+  }
+
+  const node = segments.length === 0 ? tree : findNodeAtLocation(tree, segments);
+  if (!node) {
+    return;
+  }
+
+  const model = editor.getModel();
+  if (!model) {
+    return;
+  }
+
+  const start = model.getPositionAt(node.offset);
+  const end = model.getPositionAt(node.offset + node.length);
+  editor.revealRangeInCenter(
+    {
+      startLineNumber: start.lineNumber,
+      startColumn: start.column,
+      endLineNumber: end.lineNumber,
+      endColumn: end.column,
+    },
+    1, // ScrollType.Immediate
+  );
+  editor.setSelection({
+    startLineNumber: start.lineNumber,
+    startColumn: start.column,
+    endLineNumber: end.lineNumber,
+    endColumn: end.column,
+  });
 }
