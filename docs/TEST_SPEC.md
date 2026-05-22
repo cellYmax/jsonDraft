@@ -117,6 +117,17 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - `applySaveResult` 在内容未改变时清 dirty。
 - `applySaveResult` 在 save-race 中保留新编辑为 dirty，仅前进基线和路径。
 
+### `src/lib/recentFiles.test.ts`
+
+覆盖：
+
+- 空 storage / 缺失 key 时返回空数组。
+- 过滤掉非 schema 项与 `null`。
+- 损坏 JSON 时返回空数组。
+- `loadRecentFiles` 与 `saveRecentFiles` 都按 `MAX_RECENT_FILES` 截断。
+- `addRecentFile` 把新条目置顶并按 path 去重。
+- `removeRecentFile` 移除目标 path，path 不存在时返回等价副本。
+
 ## 手工验证清单
 
 ### 启动与首屏
@@ -183,10 +194,15 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 
 | 改动区域 | 高风险回归 | 必跑检查 |
 | --- | --- | --- |
-| `jsonTools.ts` | 模式解析错误、Path 错误、转换丢内容 | `pnpm test` |
-| `fileState.ts` | dirty 状态错误、保存后基线错误 | `pnpm test` |
-| `App.tsx` 文件操作 | 未保存内容丢失、保存竞态 | `pnpm run build` + 手工文件操作 |
-| `App.tsx` UI 状态 | 侧栏溢出、按钮禁用错误 | `pnpm run build` + 浏览器/Tauri 手工检查 |
+| `lib/jsonTools.ts` | 模式解析错误、Path 错误、转换丢内容 | `pnpm test` |
+| `lib/fileState.ts` | dirty 状态错误、保存后基线错误 | `pnpm test` |
+| `lib/recentFiles.ts` | 损坏 JSON 崩溃、最近文件丢失 | `pnpm test` |
+| `lib/clipboard.ts` | 剪贴板写入失败 | 手工浏览器/Tauri 复制 |
+| `hooks/useShortcuts.ts` | 快捷键失效、与浏览器冲突 | `pnpm run build` + 手工 |
+| `hooks/useNotice.ts` | 通知不消失或错误被自动清除 | 手工触发各 tone |
+| `hooks/useCloseProtection.ts` | dirty 被静默丢弃 | Tauri 手工关窗 |
+| `components/TreePanel.tsx` | 折叠/搜索/滚动失效 | `pnpm run build` + 手工 |
+| `App.tsx` 命令编排 | 未保存内容丢失、保存竞态 | `pnpm run build` + 手工文件操作 |
 | `src-tauri/src/lib.rs` | 文件读写失败、权限缺失 | `cargo check` + Tauri 手工检查 |
 | `App.css` | 布局溢出、状态栏遮挡 | 浏览器/Tauri 多尺寸检查 |
 

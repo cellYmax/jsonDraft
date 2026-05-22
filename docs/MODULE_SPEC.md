@@ -202,17 +202,19 @@ type ParseResult = {
 
 ## `App.tsx`
 
+`App.tsx` 是顶层装配点：维护文件/光标/最近文件状态，编排 Tauri commands，把派生值和回调向下传给 `Toolbar` / `Sidebar` / `StatusBar`。所有副作用（关闭保护、快捷键、通知 auto-clear）通过自定义 hook 隔离。
+
 ### 状态
 
 - `file`：当前文件内容和保存状态。
 - `mode`：`json` 或 `jsonc`。
 - `cursor`：Monaco 当前行、列和 offset。
-- `recentFiles`：localStorage 中的最近文件，最多 5 条。
-- `treeCollapsed`：树形导航收缩状态。
-- `treeSearch`：树形导航的搜索文本，传给 `filterTreeNodes`。
-- `notice`：底部状态栏提示，结构为 `{ tone: "info" | "success" | "error", message: string }`。`success` 和 `info` 在 4s 后自动回到“准备就绪”，`error` 保持显示直到下个动作触发新通知。
+- `recentFiles`：localStorage 中的最近文件，最多 5 条；通过 `lib/recentFiles.ts` 读写。
 - `editorRef` / `monacoRef`：编辑器实例引用。
-- `treeNodeRefs`：当前路径 → 节点 DOM 的 `Map`，用于把当前节点自动滚入可视区域。
+
+> 树形导航的 `collapsed` / `search` / `treeNodeRefs` 状态收敛到 `components/TreePanel.tsx` 内部，App 不再持有。
+>
+> 通知状态由 `useNotice` 拥有；返回 `{ notice, notifyInfo, notifySuccess, notifyError }`。
 
 ### 派生值
 
@@ -224,7 +226,7 @@ type ParseResult = {
 - `newBlankFile()`：新建空白文件。
 - `restoreDemoFile()`：恢复示例文件。
 - `openFile()`：调用 `open_json_file`。
-- `openRecentFile()`：调用 `open_json_file_at`。
+- `openRecentFile()`：调用 `open_json_file_at`，失败时调用 `removeRecentFile` 自动清理。
 - `saveFile()`：有路径时保存，无路径时另存为。
 - `saveFileAs()`：调用 `save_json_file_as`。
 - `formatContent()`：格式化当前内容。
@@ -235,8 +237,11 @@ type ParseResult = {
 - `copyCurrentPath()`：复制当前 JSON Path。
 - `jumpToIssue()`：跳转解析错误。
 - `jumpToTreeNode()`：跳转树节点。
+- `handleModeChange()`：切换 JSON/JSONC，并通过 `notifyInfo` 反馈。
 
 ### 快捷键
+
+通过 `useShortcuts(handlers)` 注册，与 Toolbar 按钮共享 callback：
 
 - `Cmd/Ctrl+N`：新建。
 - `Cmd/Ctrl+O`：打开。
@@ -246,6 +251,36 @@ type ParseResult = {
 - `Cmd/Ctrl+Shift+M`：压缩。
 - `Cmd/Ctrl+Shift+E`：压缩并转义。
 - `Cmd/Ctrl+Shift+U`：去除转义。
+
+## 组件 (`src/components/`)
+
+每个组件只接收必要的派生值和回调，不直接 invoke Tauri 命令。
+
+- `Toolbar`：文件/转换/模式按钮；接收 `filePath`、`fileDirty`、`isValid`、`mode` 和回调。
+- `StatusBar`：dirty 点、文件名、保存状态、光标、大小、有效性、通知（按 tone 着色）。
+- `Sidebar`：纯装配组件，把 props 分发到下面的子面板。
+- `HealthPanel` / `IssuePanel` / `SummaryPanel` / `CurrentPathPanel` / `CopyPanel` / `RecentFilesPanel`：单一职责面板。
+- `TreePanel`：自管 `collapsed`、`search` 和 DOM `Map`；监听 `currentPath` 变化触发 `scrollIntoView({ block: "nearest" })`。
+
+## Hooks (`src/hooks/`)
+
+- `useNotice()` → `{ notice, notifyInfo, notifySuccess, notifyError }`。`notice` 结构为 `{ tone: "info" | "success" | "error", message: string }`，`success`/`info` 在 4s 后自动回到 `READY_NOTICE`，`error` 保持显示。
+- `useCloseProtection(dirty)`：注册 `beforeunload` 和 Tauri `onCloseRequested`，dirty 时弹确认。
+- `useShortcuts(handlers)`：注册全局 `Cmd/Ctrl` 快捷键并阻止默认行为。
+
+## `recentFiles.ts`
+
+- `RECENT_FILES_KEY = "jsonDraft.recentFiles"`，`MAX_RECENT_FILES = 5`。
+- `loadRecentFiles(storage?)`：读取并校验 schema，返回最多 `MAX_RECENT_FILES` 条；JSON 损坏时返回空数组。
+- `saveRecentFiles(files, storage?)`：写入前裁剪到 `MAX_RECENT_FILES`。
+- `addRecentFile(files, file)`：把目标置顶并按 `path` 去重。
+- `removeRecentFile(files, path)`：返回不含目标 path 的新数组。
+
+storage 参数支持注入 mock，单测使用 in-memory storage。
+
+## `clipboard.ts`
+
+- `writeClipboardText(text)`：在 Tauri 环境下调用插件，否则使用 `navigator.clipboard.writeText` 加 800ms 超时；失败回退到 `document.execCommand("copy")` + 离屏 `<textarea>`，最终失败抛出“复制失败。”。
 
 ## 样式模块
 

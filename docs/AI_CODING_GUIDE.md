@@ -163,8 +163,15 @@ jsonDraft 现在出现 [现象]。
 | 格式化、压缩、转义 | `src/lib/jsonTools.ts`, `src/App.tsx` handlers |
 | dirty 状态不对 | `src/lib/fileState.ts`, `src/lib/fileState.test.ts` |
 | 打开/保存失败 | `src-tauri/src/lib.rs`, `src/App.tsx` save/open handlers |
-| 最近文件 | `src/App.tsx` localStorage helpers |
-| 树形导航 | `buildTree()` in `jsonTools.ts`, tree panel in `App.tsx`, `App.css` |
+| 最近文件 | `src/lib/recentFiles.ts`, `src/App.tsx` rememberFile / openRecentFile |
+| 通知 | `src/hooks/useNotice.ts`, `src/components/StatusBar.tsx` |
+| 关闭确认 | `src/hooks/useCloseProtection.ts` |
+| 快捷键 | `src/hooks/useShortcuts.ts` |
+| 工具栏按钮 | `src/components/Toolbar.tsx` |
+| 状态栏 | `src/components/StatusBar.tsx` |
+| 侧栏面板 | `src/components/Sidebar.tsx` 装配 + `*Panel.tsx` 子组件 |
+| 树形导航（搜索/折叠/滚动） | `src/components/TreePanel.tsx` + `filterTreeNodes` in `jsonTools.ts` |
+| 剪贴板 | `src/lib/clipboard.ts` |
 | 白屏 | `src/ErrorBoundary.tsx`, `index.html`, browser console, Tauri logs |
 | 权限问题 | `src-tauri/capabilities/default.json` |
 

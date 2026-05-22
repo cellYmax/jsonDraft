@@ -47,19 +47,36 @@
 
 ```text
 src/
-  App.tsx                 # 主 UI、应用状态、命令编排
-  App.css                 # 主界面样式
-  ErrorBoundary.tsx       # React 错误兜底
-  main.tsx                # 前端入口
+  App.tsx                       # 顶层状态、命令编排、Tauri invoke 装配
+  App.css                       # 主界面样式
+  ErrorBoundary.tsx             # React 错误兜底
+  main.tsx                      # 前端入口
+  components/
+    Toolbar.tsx                 # 顶部工具栏：文件/转换/模式按钮
+    StatusBar.tsx               # 底部状态栏
+    Sidebar.tsx                 # 右侧侧栏装配
+    HealthPanel.tsx             # 校验健康面板
+    IssuePanel.tsx              # 错误列表
+    SummaryPanel.tsx            # 结构面板
+    TreePanel.tsx               # 树形导航（折叠/搜索/自动滚动）
+    CurrentPathPanel.tsx        # 当前 JSON Path
+    CopyPanel.tsx               # 快速复制
+    RecentFilesPanel.tsx        # 最近文件
+  hooks/
+    useNotice.ts                # Notice 状态 + auto-clear
+    useCloseProtection.ts       # 浏览器/Tauri 关闭保护
+    useShortcuts.ts             # 全局键盘快捷键
   lib/
-    fileState.ts          # 文件状态、dirty 判断、大小格式化
-    jsonTools.ts          # JSON/JSONC 解析、格式化、压缩、树节点
+    fileState.ts                # 文件状态、dirty 判断、大小格式化、保存合并
+    jsonTools.ts                # JSON/JSONC 解析、格式化、压缩、树、过滤
+    recentFiles.ts              # localStorage 最近文件读写、增删
+    clipboard.ts                # Tauri / 浏览器双路径剪贴板写入
 src-tauri/
-  src/lib.rs              # Tauri commands 和插件注册
-  tauri.conf.json         # Tauri 窗口、构建和打包配置
-  capabilities/default.json # Tauri 权限声明
-examples/                 # 内置示例和手工验证样本
-docs/                     # 项目规格文档
+  src/lib.rs                    # Tauri commands 和插件注册
+  tauri.conf.json               # Tauri 窗口、构建和打包配置
+  capabilities/default.json     # Tauri 权限声明
+examples/                       # 内置示例和手工验证样本
+docs/                           # 项目规格文档
 ```
 
 ## 分层边界
