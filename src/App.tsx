@@ -35,13 +35,11 @@ import {
   type RootType,
 } from "./lib/jsonTools";
 import {
-  byteSize,
+  applySaveResult,
   createBlankFileState,
   createDemoFileState,
-  createEmptyFileState,
   fileStateFromPayload,
   formatBytes,
-  markSaved,
   updateFileContent,
   type FilePayload,
   type FileState,
@@ -203,7 +201,7 @@ function canUseTauriWindowApi() {
 }
 
 function App() {
-  const [file, setFile] = useState<FileState>(() => createEmptyFileState());
+  const [file, setFile] = useState<FileState>(() => createDemoFileState());
   const [mode, setMode] = useState<JsonMode>("json");
   const [cursor, setCursor] = useState<CursorState>({
     line: 1,
@@ -398,15 +396,17 @@ function App() {
         setNotice(`已打开 ${payload.name}`);
         resetCursor();
       } catch (error) {
-        const updated = recentFiles.filter(
-          (candidate) => candidate.path !== recentFile.path,
-        );
-        saveRecentFiles(updated);
-        setRecentFiles(updated);
+        setRecentFiles((prev) => {
+          const updated = prev.filter(
+            (candidate) => candidate.path !== recentFile.path,
+          );
+          saveRecentFiles(updated);
+          return updated;
+        });
         handleCommandError(error, "打开最近文件失败");
       }
     },
-    [confirmDiscard, handleCommandError, recentFiles, rememberFile, resetCursor],
+    [confirmDiscard, handleCommandError, rememberFile, resetCursor],
   );
 
   const clearRecentFiles = useCallback(() => {
@@ -417,20 +417,7 @@ function App() {
 
   const applySavedResult = useCallback(
     (result: SaveResult | FilePayload, savedContent: string) => {
-      setFile((current) => {
-        if (current.content === savedContent) {
-          return markSaved(current, result);
-        }
-
-        return {
-          ...current,
-          path: result.path,
-          name: result.name,
-          originalContent: savedContent,
-          dirty: true,
-          sizeBytes: byteSize(current.content),
-        };
-      });
+      setFile((current) => applySaveResult(current, result, savedContent));
       setNotice(`已保存 ${result.name}`);
     },
     [],

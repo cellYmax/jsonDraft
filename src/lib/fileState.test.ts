@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   BLANK_FILE_NAME,
   DEFAULT_FILE_NAME,
+  applySaveResult,
   createBlankFileState,
   createDemoFileState,
-  createEmptyFileState,
   fileStateFromPayload,
   markSaved,
   updateFileContent,
@@ -12,7 +12,7 @@ import {
 
 describe("file state", () => {
   it("starts as a clean demo JSON document", () => {
-    const state = createEmptyFileState();
+    const state = createDemoFileState();
 
     expect(state.path).toBeNull();
     expect(state.name).toBe(DEFAULT_FILE_NAME);
@@ -27,13 +27,6 @@ describe("file state", () => {
     expect(state.name).toBe(BLANK_FILE_NAME);
     expect(state.content).toBe("{\n  \n}\n");
     expect(state.dirty).toBe(false);
-  });
-
-  it("can explicitly create the demo JSON document", () => {
-    const state = createDemoFileState();
-
-    expect(state.name).toBe(DEFAULT_FILE_NAME);
-    expect(state.content).toContain('"id": "cus_10001"');
   });
 
   it("creates clean state from an opened file", () => {
@@ -65,7 +58,7 @@ describe("file state", () => {
   });
 
   it("marks current content saved", () => {
-    const state = updateFileContent(createEmptyFileState(), '{"ok":true}');
+    const state = updateFileContent(createDemoFileState(), '{"ok":true}');
     const saved = markSaved(state, {
       path: "/tmp/ok.json",
       name: "ok.json",
@@ -75,5 +68,52 @@ describe("file state", () => {
     expect(saved.dirty).toBe(false);
     expect(saved.path).toBe("/tmp/ok.json");
     expect(saved.originalContent).toBe('{"ok":true}');
+  });
+
+  describe("applySaveResult", () => {
+    it("becomes clean when content matches what was saved", () => {
+      const initial = fileStateFromPayload({
+        path: "/tmp/old.json",
+        name: "old.json",
+        content: "{}",
+        sizeBytes: 2,
+      });
+      const edited = updateFileContent(initial, '{"a":1}');
+
+      const next = applySaveResult(
+        edited,
+        { path: "/tmp/new.json", name: "new.json", sizeBytes: 7 },
+        '{"a":1}',
+      );
+
+      expect(next.dirty).toBe(false);
+      expect(next.path).toBe("/tmp/new.json");
+      expect(next.name).toBe("new.json");
+      expect(next.originalContent).toBe('{"a":1}');
+      expect(next.content).toBe('{"a":1}');
+    });
+
+    it("preserves newer edits as dirty during a save race", () => {
+      const initial = fileStateFromPayload({
+        path: "/tmp/old.json",
+        name: "old.json",
+        content: "{}",
+        sizeBytes: 2,
+      });
+      const editedDuringSave = updateFileContent(initial, '{"a":2}');
+
+      const next = applySaveResult(
+        editedDuringSave,
+        { path: "/tmp/new.json", name: "new.json", sizeBytes: 7 },
+        '{"a":1}',
+      );
+
+      expect(next.dirty).toBe(true);
+      expect(next.path).toBe("/tmp/new.json");
+      expect(next.name).toBe("new.json");
+      expect(next.content).toBe('{"a":2}');
+      expect(next.originalContent).toBe('{"a":1}');
+      expect(next.sizeBytes).toBe(new TextEncoder().encode('{"a":2}').length);
+    });
   });
 });

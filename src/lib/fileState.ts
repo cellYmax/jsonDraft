@@ -49,10 +49,6 @@ export function createBlankFileState(): FileState {
   };
 }
 
-export function createEmptyFileState(): FileState {
-  return createDemoFileState();
-}
-
 export function fileStateFromPayload(payload: FilePayload): FileState {
   return {
     path: payload.path,
@@ -91,6 +87,25 @@ export function markSaved(
     originalContent: state.content,
     dirty: false,
     sizeBytes,
+  };
+}
+
+export function applySaveResult(
+  state: FileState,
+  result: SaveResult | FilePayload,
+  savedContent: string,
+): FileState {
+  if (state.content === savedContent) {
+    return markSaved(state, result);
+  }
+
+  return {
+    ...state,
+    path: result.path,
+    name: result.name,
+    originalContent: savedContent,
+    dirty: true,
+    sizeBytes: byteSize(state.content),
   };
 }
 

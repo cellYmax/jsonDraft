@@ -81,7 +81,8 @@ JS 收到的是 `{ filePath, fileName }`。TypeScript 类型中**不要**用 sna
 - `createDemoFileState()` / `createBlankFileState()` —— 初始态
 - `fileStateFromPayload(payload)` —— Rust I/O 之后
 - `updateFileContent(state, content)` —— 编辑器变更
-- `markSaved(state, savedContent)` —— 写入成功后（含 save-race 处理）
+- `markSaved(state, savedContent?)` —— 写入成功且当前内容未改变时
+- `applySaveResult(state, result, savedContent)` —— 写入成功后的统一入口（自动处理 save-race）
 
 **不要在 `App.tsx` 中直接 inline 修改 `FileState`**，永远调用 helper。
 

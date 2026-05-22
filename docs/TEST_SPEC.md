@@ -109,10 +109,11 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 
 - 默认启动为干净示例文件。
 - 新建空白文件。
-- 显式创建示例文件。
 - 打开文件 payload 转换。
 - 编辑后 dirty，改回原文后 clean。
 - 保存后更新路径、基线和 dirty。
+- `applySaveResult` 在内容未改变时清 dirty。
+- `applySaveResult` 在 save-race 中保留新编辑为 dirty，仅前进基线和路径。
 
 ## 手工验证清单
 

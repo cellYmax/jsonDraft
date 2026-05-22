@@ -126,13 +126,13 @@ type ParseResult = {
 
 - `createDemoFileState()`：加载 `examples/customer-profile.json`，作为默认启动内容。
 - `createBlankFileState()`：创建 `未命名.json` 空白模板。
-- `createEmptyFileState()`：当前等同于 `createDemoFileState()`，保留语义入口。
 - `fileStateFromPayload(payload)`：把 Tauri 返回值转换为干净文件状态。
 
 ### 状态转换
 
 - `updateFileContent(state, content)`：更新内容、字节大小和 dirty。
 - `markSaved(state, result?)`：把当前内容标记为已保存，并更新路径、文件名、字节大小。
+- `applySaveResult(state, result, savedContent)`：处理保存返回值并兼容 save-race。当 `state.content === savedContent` 时等价于 `markSaved`；否则保留新编辑的内容为 dirty，仅前进 `originalContent` 基线、路径和文件名。
 
 ### 工具函数
 
