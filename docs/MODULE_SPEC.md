@@ -56,14 +56,19 @@ type ParseIssue = {
 位置：`src/lib/jsonTools.ts`
 
 ```ts
+type NodeRange = { offset: number; length: number };
+
 type JsonSummary = {
   valid: boolean;
   rootType: RootType;
   itemCount: number | null;
   currentPath: string;
+  currentRange: NodeRange | null;
   formatState: FormatState;
 };
 ```
+
+`currentRange` 仅在解析成功时给出，指向光标所在 JSON 节点的字符 offset 区间，用于编辑器内的路径范围高亮。
 
 ### `ParseResult`
 
@@ -210,7 +215,8 @@ type ParseResult = {
 - `mode`：`json` 或 `jsonc`。
 - `cursor`：Monaco 当前行、列和 offset。
 - `recentFiles`：localStorage 中的最近文件，最多 5 条；通过 `lib/recentFiles.ts` 读写。
-- `editorRef` / `monacoRef`：编辑器实例引用。
+- `editorRef` / `monacoRef`：编辑器实例引用，供命令式 API（光标移动、Reveal）使用。
+- `editorInstance`：Monaco 实例的 state 副本，供 `usePathHighlight` 这类需要在挂载后触发 effect 的 hook 订阅。
 
 > 树形导航的 `collapsed` / `search` / `treeNodeRefs` 状态收敛到 `components/TreePanel.tsx` 内部，App 不再持有。
 >
@@ -267,6 +273,7 @@ type ParseResult = {
 - `useNotice()` → `{ notice, notifyInfo, notifySuccess, notifyError }`。`notice` 结构为 `{ tone: "info" | "success" | "error", message: string }`，`success`/`info` 在 4s 后自动回到 `READY_NOTICE`，`error` 保持显示。
 - `useCloseProtection(dirty)`：注册 `beforeunload` 和 Tauri `onCloseRequested`，dirty 时弹确认。
 - `useShortcuts(handlers)`：注册全局 `Cmd/Ctrl` 快捷键并阻止默认行为。
+- `usePathHighlight(editor, range, rootLength)`：在 Monaco 内维护 `path-highlight` 装饰集合，跟随 `range` 变化更新；range 为空、零长度或与根节点等长时清空。编辑器实例通过 state（而非 ref）传入，确保 mount 后能触发 effect。
 
 ## `recentFiles.ts`
 

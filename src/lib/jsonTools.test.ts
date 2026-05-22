@@ -82,6 +82,28 @@ describe("analyzeJson", () => {
     expect(result.summary.currentPath).toBe("$.items[0].id");
   });
 
+  it("returns the cursor node range when valid", () => {
+    const content = '{\n  "name": "Alice"\n}';
+    const offset = content.indexOf("Alice");
+    const result = analyzeJson(content, "json", offset);
+
+    const stringStart = content.indexOf('"Alice"');
+    expect(result.summary.currentRange).toEqual({
+      offset: stringStart,
+      length: '"Alice"'.length,
+    });
+  });
+
+  it("returns a null range when JSON is invalid", () => {
+    const result = analyzeJson('{"name":', "json", 7);
+    expect(result.summary.currentRange).toBeNull();
+  });
+
+  it("returns a null range for an empty document", () => {
+    const result = analyzeJson("", "json", 0);
+    expect(result.summary.currentRange).toBeNull();
+  });
+
   it("builds a flat tree for navigation", () => {
     const result = analyzeJson(
       '{"items":[{"id":1,"name":"Desk"}],"enabled":true}',

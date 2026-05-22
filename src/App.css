@@ -648,3 +648,8 @@ button:disabled {
   color: #b42318;
   font-weight: 600;
 }
+
+.path-highlight {
+  background-color: rgba(15, 118, 110, 0.12);
+  border-radius: 2px;
+}

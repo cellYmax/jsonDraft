@@ -96,6 +96,7 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 严格 JSON 拒绝 JSONC 语法。
 - 字符串未闭合、无效 Unicode 转义、无效转义字符的专用错误消息。
 - 光标 JSON Path。
+- 光标节点 `currentRange`（有效 JSON）、无效 JSON 时为 null、空文档时为 null。
 - 树形导航节点生成。
 - 严格 JSON 格式化。
 - JSONC 格式化保留注释。
@@ -175,6 +176,7 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 快速复制“压缩”和“转义”可写入剪贴板。
 - 光标变化时，树形导航的当前节点自动滚入可视区域。
 - 树形导航搜索框可按 label / path / preview 过滤；输入无匹配时显示“没有匹配节点”。
+- 编辑器内光标所在节点出现柔和绿色背景高亮；光标移到根节点之外的任意子节点都能正确刷新；JSON 无效时高亮消失；切回有效后恢复。
 
 ### 保存与原子写
 
@@ -200,6 +202,7 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 | `lib/clipboard.ts` | 剪贴板写入失败 | 手工浏览器/Tauri 复制 |
 | `hooks/useShortcuts.ts` | 快捷键失效、与浏览器冲突 | `pnpm run build` + 手工 |
 | `hooks/useNotice.ts` | 通知不消失或错误被自动清除 | 手工触发各 tone |
+| `hooks/usePathHighlight.ts` | 高亮卡在旧节点 / 切换文件后未清理 / 整文档变色 | 手工移动光标、切换有效/无效 |
 | `hooks/useCloseProtection.ts` | dirty 被静默丢弃 | Tauri 手工关窗 |
 | `components/TreePanel.tsx` | 折叠/搜索/滚动失效 | `pnpm run build` + 手工 |
 | `App.tsx` 命令编排 | 未保存内容丢失、保存竞态 | `pnpm run build` + 手工文件操作 |

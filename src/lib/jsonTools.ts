@@ -1,5 +1,6 @@
 import {
   applyEdits,
+  findNodeAtOffset,
   format as formatJsonc,
   getLocation,
   getNodeValue,
@@ -28,11 +29,17 @@ export type ParseIssue = {
   severity: "error";
 };
 
+export type NodeRange = {
+  offset: number;
+  length: number;
+};
+
 export type JsonSummary = {
   valid: boolean;
   rootType: RootType;
   itemCount: number | null;
   currentPath: string;
+  currentRange: NodeRange | null;
   formatState: FormatState;
 };
 
@@ -106,6 +113,7 @@ export function analyzeJson(
         rootType: "unknown",
         itemCount: null,
         currentPath,
+        currentRange: null,
         formatState: "invalid",
       },
       tree: [],
@@ -126,6 +134,7 @@ export function analyzeJson(
         rootType: "unknown",
         itemCount: null,
         currentPath,
+        currentRange: null,
         formatState: "invalid",
       },
       tree: [],
@@ -136,6 +145,10 @@ export function analyzeJson(
   const value = parse(content, [], parseOptions[mode]);
   const rootType = getRootType(value);
   const treeInfo = buildTree(tree);
+  const currentNode = findNodeAtOffset(tree, safeOffset, true);
+  const currentRange: NodeRange | null = currentNode
+    ? { offset: currentNode.offset, length: currentNode.length }
+    : null;
 
   return {
     value,
@@ -145,6 +158,7 @@ export function analyzeJson(
       rootType,
       itemCount: getItemCount(value),
       currentPath,
+      currentRange,
       formatState: detectFormatState(content, mode, value),
     },
     tree: treeInfo.nodes,

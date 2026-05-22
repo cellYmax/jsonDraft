@@ -167,6 +167,7 @@ jsonDraft 现在出现 [现象]。
 | 通知 | `src/hooks/useNotice.ts`, `src/components/StatusBar.tsx` |
 | 关闭确认 | `src/hooks/useCloseProtection.ts` |
 | 快捷键 | `src/hooks/useShortcuts.ts` |
+| 路径范围高亮 | `src/hooks/usePathHighlight.ts`, `currentRange` in `jsonTools.ts` |
 | 工具栏按钮 | `src/components/Toolbar.tsx` |
 | 状态栏 | `src/components/StatusBar.tsx` |
 | 侧栏面板 | `src/components/Sidebar.tsx` 装配 + `*Panel.tsx` 子组件 |

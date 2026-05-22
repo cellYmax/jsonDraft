@@ -8,6 +8,7 @@ import { StatusBar } from "./components/StatusBar";
 import { Toolbar } from "./components/Toolbar";
 import { useCloseProtection } from "./hooks/useCloseProtection";
 import { useNotice } from "./hooks/useNotice";
+import { usePathHighlight } from "./hooks/usePathHighlight";
 import { useShortcuts } from "./hooks/useShortcuts";
 import { writeClipboardText } from "./lib/clipboard";
 import {
@@ -90,6 +91,8 @@ function App() {
   );
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
+  const [editorInstance, setEditorInstance] =
+    useState<Monaco.editor.IStandaloneCodeEditor | null>(null);
 
   const { notice, notifyInfo, notifySuccess, notifyError } = useNotice();
 
@@ -129,6 +132,12 @@ function App() {
 
   useCloseProtection(file.dirty);
 
+  usePathHighlight(
+    editorInstance,
+    parseResult.summary.currentRange,
+    deferredContent.length,
+  );
+
   const updateCursorFromEditor = useCallback(
     (editor: Monaco.editor.IStandaloneCodeEditor) => {
       const position = editor.getPosition();
@@ -154,6 +163,7 @@ function App() {
 
   const onMount: OnMount = (editor) => {
     editorRef.current = editor;
+    setEditorInstance(editor);
     updateCursorFromEditor(editor);
     editor.onDidChangeCursorPosition(() => updateCursorFromEditor(editor));
   };
