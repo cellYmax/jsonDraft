@@ -391,6 +391,49 @@ button:disabled {
   padding: 0;
 }
 
+.tree-search {
+  align-items: center;
+  background: #f8faf7;
+  border: 1px solid #d9ded6;
+  border-radius: 6px;
+  color: #6b746f;
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 0 8px;
+}
+
+.tree-search input {
+  background: transparent;
+  border: none;
+  color: #1f2421;
+  flex: 1;
+  font: inherit;
+  font-size: 12px;
+  height: 28px;
+  min-width: 0;
+  outline: none;
+  padding: 0;
+}
+
+.tree-search input::placeholder {
+  color: #9aa39e;
+}
+
+.tree-search-clear {
+  background: transparent;
+  border: none;
+  color: #6b746f;
+  height: 22px;
+  padding: 0 4px;
+  width: auto;
+}
+
+.tree-search-clear:hover:not(:disabled) {
+  background: transparent;
+  color: #1f2421;
+}
+
 .tree-list li {
   max-width: 100%;
   min-width: 0;

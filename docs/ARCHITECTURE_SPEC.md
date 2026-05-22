@@ -38,8 +38,8 @@
 | --- | --- |
 | `open_json_file()` | 弹出打开对话框，读文件（≤10MB），返回 `FilePayload` |
 | `open_json_file_at(path)` | 按已知路径读文件（最近文件用） |
-| `save_json_file(path, content)` | 写入已知路径 |
-| `save_json_file_as(content)` | 弹出保存对话框，写入 |
+| `save_json_file(path, content)` | 写入已知路径（tmp + rename 原子写） |
+| `save_json_file_as(content)` | 弹出保存对话框，原子写入 |
 
 所有跨边界结构使用 `#[serde(rename_all = "camelCase")]`，JS 收到的是 `{ filePath, fileName, content, sizeBytes }`。详细行为见 `docs/MODULE_SPEC.md`。
 
@@ -126,7 +126,7 @@ Monaco onChange
 User
   -> App.saveFile()
   -> invoke("save_json_file" | "save_json_file_as")
-  -> Rust write file
+  -> Rust write_atomic (tmp file + sync_all + rename)
   -> applySavedResult()
   -> markSaved() or preserve newer editor content as dirty
 ```
@@ -162,6 +162,7 @@ User
 - 无效 JSON 不构建树形导航。
 - 树形导航最多展示 250 个节点，避免大型结构拖慢 UI。
 - 用户取消 Tauri 对话框不是错误状态。
+- 文件写入采用 `tmp + sync_all + rename` 的原子流程，崩溃时目标文件保持原内容或新内容之一，不会出现半截内容。
 
 ## 性能假设
 

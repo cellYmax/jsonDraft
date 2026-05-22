@@ -94,6 +94,7 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 严格 JSON 错误行列。
 - JSONC 注释和尾逗号。
 - 严格 JSON 拒绝 JSONC 语法。
+- 字符串未闭合、无效 Unicode 转义、无效转义字符的专用错误消息。
 - 光标 JSON Path。
 - 树形导航节点生成。
 - 严格 JSON 格式化。
@@ -102,6 +103,7 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 压缩并转义。
 - 去除转义。
 - 非 dot-safe key 的路径字符串。
+- `filterTreeNodes` 空查询/label/path/preview 匹配以及无结果情形。
 
 ### `src/lib/fileState.test.ts`
 
@@ -160,6 +162,14 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 点击树节点，Monaco 跳到对应位置。
 - 复制当前路径可写入剪贴板。
 - 快速复制“压缩”和“转义”可写入剪贴板。
+- 光标变化时，树形导航的当前节点自动滚入可视区域。
+- 树形导航搜索框可按 label / path / preview 过滤；输入无匹配时显示“没有匹配节点”。
+
+### 保存与原子写
+
+- 保存到只读目录或不存在目录时返回中文错误，不留下临时文件。
+- 写入完成后目标目录里看不到 `.{name}.{pid}.{counter}.jsondraft-tmp` 文件。
+- 中途被强制结束（如 kill 进程）后，目标文件保留旧内容或新内容之一，不会出现半截内容。
 
 ### 最近文件
 

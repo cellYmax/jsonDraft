@@ -109,7 +109,9 @@ type ParseResult = {
 
 行为：
 
-- 将 `content` 写入指定路径。
+- 使用 `write_atomic`：先写入 `.{name}.{pid}.{counter}.jsondraft-tmp`，调用 `sync_all` 持久化，再 `rename` 到目标路径，避免写入过程中崩溃产生半截文件。
+- 校验父目录存在；不存在时返回中文错误。
+- 中途失败会清理 tmp 文件并返回中文错误。
 - 返回路径、文件名和写入字节数。
 
 ### `save_json_file_as(content: string) -> FilePayload`
@@ -118,6 +120,7 @@ type ParseResult = {
 
 - 弹出保存文件对话框。
 - 默认文件名为 `untitled.json`。
+- 使用与 `save_json_file` 相同的 `write_atomic` 流程写入。
 - 写入后返回完整文件 payload。
 
 ## `fileState.ts`
@@ -189,6 +192,14 @@ type ParseResult = {
 - 严格 JSON 模式格式化失败时，会尝试按 JSONC 格式化一次。
 - 仍失败则抛出“去除转义后的内容不是有效 JSON。”
 
+### `filterTreeNodes(nodes, query)`
+
+行为：
+
+- 输入查询为空（或仅空白）时返回原数组引用。
+- 查询大小写不敏感，匹配节点 `label`、`path` 或 `preview` 任一字段包含子串。
+- 不构建新的层级，调用方负责按返回顺序渲染。
+
 ## `App.tsx`
 
 ### 状态
@@ -198,8 +209,10 @@ type ParseResult = {
 - `cursor`：Monaco 当前行、列和 offset。
 - `recentFiles`：localStorage 中的最近文件，最多 5 条。
 - `treeCollapsed`：树形导航收缩状态。
+- `treeSearch`：树形导航的搜索文本，传给 `filterTreeNodes`。
 - `notice`：底部状态栏提示，结构为 `{ tone: "info" | "success" | "error", message: string }`。`success` 和 `info` 在 4s 后自动回到“准备就绪”，`error` 保持显示直到下个动作触发新通知。
 - `editorRef` / `monacoRef`：编辑器实例引用。
+- `treeNodeRefs`：当前路径 → 节点 DOM 的 `Map`，用于把当前节点自动滚入可视区域。
 
 ### 派生值
 

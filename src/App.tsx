@@ -19,12 +19,15 @@ import {
   RotateCcw,
   Save,
   SaveAll,
+  Search,
   Wand2,
+  X,
 } from "lucide-react";
 import "./App.css";
 import {
   analyzeJson,
   escapeMinifiedJsonContent,
+  filterTreeNodes,
   formatJsonContent,
   minifyJsonContent,
   type JsonTreeNode,
@@ -222,9 +225,11 @@ function App() {
     loadRecentFiles(),
   );
   const [treeCollapsed, setTreeCollapsed] = useState(false);
+  const [treeSearch, setTreeSearch] = useState("");
   const [notice, setNotice] = useState<Notice>(READY_NOTICE);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
+  const treeNodeRefs = useRef(new Map<string, HTMLButtonElement>());
 
   const notifyInfo = useCallback((message: string) => {
     setNotice({ tone: "info", message });
@@ -256,6 +261,19 @@ function App() {
 
   const isParsePending =
     deferredContent !== file.content || deferredCursorOffset !== cursor.offset;
+
+  const visibleTreeNodes = useMemo(
+    () => filterTreeNodes(parseResult.tree, treeSearch),
+    [parseResult.tree, treeSearch],
+  );
+
+  useEffect(() => {
+    if (treeCollapsed) {
+      return;
+    }
+    const button = treeNodeRefs.current.get(parseResult.summary.currentPath);
+    button?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [parseResult.summary.currentPath, treeCollapsed, visibleTreeNodes]);
 
   const configureJsonDiagnostics = useCallback(
     (monaco: typeof Monaco) => {
@@ -907,31 +925,64 @@ function App() {
               <p className="empty-state">没有可导航节点</p>
             ) : (
               <>
-                <ul className="tree-list">
-                  {parseResult.tree.map((node) => (
-                    <li key={node.id}>
-                      <button
-                        type="button"
-                        className={
-                          node.path === parseResult.summary.currentPath
-                            ? "active"
-                            : ""
-                        }
-                        onClick={() => jumpToTreeNode(node)}
-                        style={{
-                          paddingLeft: `${8 + Math.min(node.depth, 8) * 10}px`,
-                        }}
-                        title={node.path}
-                      >
-                        <span className={`tree-type ${node.type}`}>
-                          {TREE_TYPE_LABELS[node.type]}
-                        </span>
-                        <span className="tree-label">{node.label}</span>
-                        <span className="tree-preview">{node.preview}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <div className="tree-search">
+                  <Search size={14} aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={treeSearch}
+                    onChange={(event) => setTreeSearch(event.target.value)}
+                    placeholder="搜索键、路径或值"
+                    aria-label="搜索树节点"
+                  />
+                  {treeSearch ? (
+                    <button
+                      type="button"
+                      className="tree-search-clear"
+                      onClick={() => setTreeSearch("")}
+                      title="清空搜索"
+                      aria-label="清空搜索"
+                    >
+                      <X size={13} aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+                {visibleTreeNodes.length === 0 ? (
+                  <p className="empty-state">没有匹配节点</p>
+                ) : (
+                  <ul className="tree-list">
+                    {visibleTreeNodes.map((node) => (
+                      <li key={node.id}>
+                        <button
+                          type="button"
+                          ref={(element) => {
+                            const map = treeNodeRefs.current;
+                            if (element) {
+                              map.set(node.path, element);
+                            } else {
+                              map.delete(node.path);
+                            }
+                          }}
+                          className={
+                            node.path === parseResult.summary.currentPath
+                              ? "active"
+                              : ""
+                          }
+                          onClick={() => jumpToTreeNode(node)}
+                          style={{
+                            paddingLeft: `${8 + Math.min(node.depth, 8) * 10}px`,
+                          }}
+                          title={node.path}
+                        >
+                          <span className={`tree-type ${node.type}`}>
+                            {TREE_TYPE_LABELS[node.type]}
+                          </span>
+                          <span className="tree-label">{node.label}</span>
+                          <span className="tree-preview">{node.preview}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 {parseResult.treeTruncated ? (
                   <p className="tree-note">仅显示前 250 个节点</p>
                 ) : null}

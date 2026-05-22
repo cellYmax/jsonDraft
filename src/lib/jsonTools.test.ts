@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeJson,
   escapeMinifiedJsonContent,
+  filterTreeNodes,
   formatJsonContent,
   minifyJsonContent,
   pathToString,
@@ -166,5 +167,36 @@ describe("unescapeJsonContent", () => {
 describe("pathToString", () => {
   it("quotes keys that are not dot-safe", () => {
     expect(pathToString(["a-b", 0, "name"])).toBe('$["a-b"][0].name');
+  });
+});
+
+describe("filterTreeNodes", () => {
+  const tree = analyzeJson(
+    '{"users":[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}],"version":"1.0"}',
+    "json",
+  ).tree;
+
+  it("returns all nodes for an empty query", () => {
+    expect(filterTreeNodes(tree, "")).toBe(tree);
+    expect(filterTreeNodes(tree, "   ")).toBe(tree);
+  });
+
+  it("matches against the node label", () => {
+    const paths = filterTreeNodes(tree, "version").map((node) => node.path);
+    expect(paths).toEqual(["$.version"]);
+  });
+
+  it("matches against the node path", () => {
+    const paths = filterTreeNodes(tree, "users[0]").map((node) => node.path);
+    expect(paths).toEqual(["$.users[0]", "$.users[0].id", "$.users[0].name"]);
+  });
+
+  it("matches against the node preview case-insensitively", () => {
+    const paths = filterTreeNodes(tree, "alice").map((node) => node.path);
+    expect(paths).toEqual(["$.users[0].name"]);
+  });
+
+  it("returns an empty list when nothing matches", () => {
+    expect(filterTreeNodes(tree, "no-such-thing")).toEqual([]);
   });
 });

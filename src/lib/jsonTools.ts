@@ -198,6 +198,24 @@ export function unescapeJsonContent(content: string, mode: JsonMode): string {
   throw new Error("去除转义后的内容不是有效 JSON。");
 }
 
+export function filterTreeNodes(
+  nodes: JsonTreeNode[],
+  query: string,
+): JsonTreeNode[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) {
+    return nodes;
+  }
+
+  return nodes.filter((node) => {
+    return (
+      node.label.toLowerCase().includes(trimmed) ||
+      node.path.toLowerCase().includes(trimmed) ||
+      node.preview.toLowerCase().includes(trimmed)
+    );
+  });
+}
+
 export function pathToString(path: (string | number)[]): string {
   if (path.length === 0) {
     return "$";
