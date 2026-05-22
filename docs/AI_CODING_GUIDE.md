@@ -88,7 +88,7 @@ JS 收到的是 `{ filePath, fileName }`。TypeScript 类型中**不要**用 sna
 
 ### useMemo 派生模式
 
-`parseResult` 通过 `useMemo` 从 `(content, mode, cursorOffset)` 派生。新增影响解析/分析的状态时，扩展这个依赖元组——**不要**新建并行的 `useEffect`。
+`parseResult` 通过 `useMemo` 从 `(deferredContent, mode, deferredCursorOffset)` 派生，其中 `deferredContent` 和 `deferredCursorOffset` 由 `useDeferredValue` 提供，避免大文件每次按键都同步重算解析。新增影响解析/分析的状态时，扩展这个依赖元组——**不要**新建并行的 `useEffect`。
 
 ### 启动必有示例
 

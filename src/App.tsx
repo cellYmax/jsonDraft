@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { writeText as writeTauriClipboardText } from "@tauri-apps/plugin-clipboard-manager";
@@ -51,6 +51,16 @@ type CursorState = {
   column: number;
   offset: number;
 };
+
+type NoticeTone = "info" | "success" | "error";
+
+type Notice = {
+  tone: NoticeTone;
+  message: string;
+};
+
+const READY_NOTICE: Notice = { tone: "info", message: "准备就绪" };
+const NOTICE_AUTO_CLEAR_MS = 4000;
 
 type JsonDefaults = {
   setDiagnosticsOptions(options: {
@@ -212,14 +222,40 @@ function App() {
     loadRecentFiles(),
   );
   const [treeCollapsed, setTreeCollapsed] = useState(false);
-  const [notice, setNotice] = useState("准备就绪");
+  const [notice, setNotice] = useState<Notice>(READY_NOTICE);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
 
+  const notifyInfo = useCallback((message: string) => {
+    setNotice({ tone: "info", message });
+  }, []);
+  const notifySuccess = useCallback((message: string) => {
+    setNotice({ tone: "success", message });
+  }, []);
+  const notifyError = useCallback((message: string) => {
+    setNotice({ tone: "error", message });
+  }, []);
+
+  useEffect(() => {
+    if (notice.tone === "error" || notice === READY_NOTICE) {
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      setNotice(READY_NOTICE);
+    }, NOTICE_AUTO_CLEAR_MS);
+    return () => window.clearTimeout(handle);
+  }, [notice]);
+
+  const deferredContent = useDeferredValue(file.content);
+  const deferredCursorOffset = useDeferredValue(cursor.offset);
+
   const parseResult = useMemo(
-    () => analyzeJson(file.content, mode, cursor.offset),
-    [cursor.offset, file.content, mode],
+    () => analyzeJson(deferredContent, mode, deferredCursorOffset),
+    [deferredContent, deferredCursorOffset, mode],
   );
+
+  const isParsePending =
+    deferredContent !== file.content || deferredCursorOffset !== cursor.offset;
 
   const configureJsonDiagnostics = useCallback(
     (monaco: typeof Monaco) => {
@@ -311,14 +347,17 @@ function App() {
     );
   }, [file.dirty]);
 
-  const handleCommandError = useCallback((error: unknown, fallback: string) => {
-    const message = String(error);
-    if (message.includes("CANCELLED")) {
-      setNotice("操作已取消");
-      return;
-    }
-    setNotice(message || fallback);
-  }, []);
+  const handleCommandError = useCallback(
+    (error: unknown, fallback: string) => {
+      const message = String(error);
+      if (message.includes("CANCELLED")) {
+        notifyInfo("操作已取消");
+        return;
+      }
+      notifyError(message || fallback);
+    },
+    [notifyError, notifyInfo],
+  );
 
   const rememberFile = useCallback((payload: FilePayload | SaveResult) => {
     const updated = addRecentFile(loadRecentFiles(), {
@@ -351,8 +390,8 @@ function App() {
 
     setFile(createBlankFileState());
     resetCursor();
-    setNotice("已新建空白 JSON");
-  }, [confirmDiscard, resetCursor]);
+    notifySuccess("已新建空白 JSON");
+  }, [confirmDiscard, notifySuccess, resetCursor]);
 
   const restoreDemoFile = useCallback(() => {
     if (!confirmDiscard()) {
@@ -362,8 +401,8 @@ function App() {
     setFile(createDemoFileState());
     setMode("json");
     resetCursor();
-    setNotice("已恢复示例文件");
-  }, [confirmDiscard, resetCursor]);
+    notifySuccess("已恢复示例文件");
+  }, [confirmDiscard, notifySuccess, resetCursor]);
 
   const openFile = useCallback(async () => {
     if (!confirmDiscard()) {
@@ -374,12 +413,18 @@ function App() {
       const payload = await invoke<FilePayload>("open_json_file");
       setFile(fileStateFromPayload(payload));
       rememberFile(payload);
-      setNotice(`已打开 ${payload.name}`);
+      notifySuccess(`已打开 ${payload.name}`);
       resetCursor();
     } catch (error) {
       handleCommandError(error, "打开失败");
     }
-  }, [confirmDiscard, handleCommandError, rememberFile, resetCursor]);
+  }, [
+    confirmDiscard,
+    handleCommandError,
+    notifySuccess,
+    rememberFile,
+    resetCursor,
+  ]);
 
   const openRecentFile = useCallback(
     async (recentFile: RecentFile) => {
@@ -393,7 +438,7 @@ function App() {
         });
         setFile(fileStateFromPayload(payload));
         rememberFile(payload);
-        setNotice(`已打开 ${payload.name}`);
+        notifySuccess(`已打开 ${payload.name}`);
         resetCursor();
       } catch (error) {
         setRecentFiles((prev) => {
@@ -406,21 +451,27 @@ function App() {
         handleCommandError(error, "打开最近文件失败");
       }
     },
-    [confirmDiscard, handleCommandError, rememberFile, resetCursor],
+    [
+      confirmDiscard,
+      handleCommandError,
+      notifySuccess,
+      rememberFile,
+      resetCursor,
+    ],
   );
 
   const clearRecentFiles = useCallback(() => {
     saveRecentFiles([]);
     setRecentFiles([]);
-    setNotice("已清空最近文件");
-  }, []);
+    notifyInfo("已清空最近文件");
+  }, [notifyInfo]);
 
   const applySavedResult = useCallback(
     (result: SaveResult | FilePayload, savedContent: string) => {
       setFile((current) => applySaveResult(current, result, savedContent));
-      setNotice(`已保存 ${result.name}`);
+      notifySuccess(`已保存 ${result.name}`);
     },
-    [],
+    [notifySuccess],
   );
 
   const saveFileAs = useCallback(async () => {
@@ -468,41 +519,41 @@ function App() {
     try {
       const formatted = formatJsonContent(file.content, mode);
       setFile((current) => updateFileContent(current, formatted));
-      setNotice("已格式化");
+      notifySuccess("已格式化");
     } catch (error) {
       handleCommandError(error, "格式化失败");
     }
-  }, [file.content, handleCommandError, mode]);
+  }, [file.content, handleCommandError, mode, notifySuccess]);
 
   const minifyContent = useCallback(() => {
     try {
       const minified = minifyJsonContent(file.content, mode);
       setFile((current) => updateFileContent(current, minified));
-      setNotice(mode === "jsonc" ? "已压缩为标准 JSON" : "已压缩");
+      notifySuccess(mode === "jsonc" ? "已压缩为标准 JSON" : "已压缩");
     } catch (error) {
       handleCommandError(error, "压缩失败");
     }
-  }, [file.content, handleCommandError, mode]);
+  }, [file.content, handleCommandError, mode, notifySuccess]);
 
   const escapeContent = useCallback(() => {
     try {
       const escaped = escapeMinifiedJsonContent(file.content, mode);
       setFile((current) => updateFileContent(current, escaped));
-      setNotice("已压缩并转义为 JSON 字符串");
+      notifySuccess("已压缩并转义为 JSON 字符串");
     } catch (error) {
       handleCommandError(error, "压缩转义失败");
     }
-  }, [file.content, handleCommandError, mode]);
+  }, [file.content, handleCommandError, mode, notifySuccess]);
 
   const unescapeContent = useCallback(() => {
     try {
       const unescaped = unescapeJsonContent(file.content, mode);
       setFile((current) => updateFileContent(current, unescaped));
-      setNotice("已去除转义并格式化");
+      notifySuccess("已去除转义并格式化");
     } catch (error) {
       handleCommandError(error, "去除转义失败");
     }
-  }, [file.content, handleCommandError, mode]);
+  }, [file.content, handleCommandError, mode, notifySuccess]);
 
   const copyDerivedContent = useCallback(
     async (kind: "minified" | "escaped") => {
@@ -513,7 +564,7 @@ function App() {
             : escapeMinifiedJsonContent(file.content, mode);
 
         await writeClipboardText(result);
-        setNotice(kind === "minified" ? "已复制压缩结果" : "已复制转义结果");
+        notifySuccess(kind === "minified" ? "已复制压缩结果" : "已复制转义结果");
       } catch (error) {
         handleCommandError(
           error,
@@ -521,50 +572,56 @@ function App() {
         );
       }
     },
-    [file.content, handleCommandError, mode],
+    [file.content, handleCommandError, mode, notifySuccess],
   );
 
   const copyCurrentPath = useCallback(async () => {
     try {
       await writeClipboardText(parseResult.summary.currentPath);
-      setNotice("已复制当前路径");
+      notifySuccess("已复制当前路径");
     } catch {
-      setNotice("复制失败");
+      notifyError("复制失败");
     }
-  }, [parseResult.summary.currentPath]);
+  }, [notifyError, notifySuccess, parseResult.summary.currentPath]);
 
-  const jumpToIssue = useCallback((issue: ParseIssue) => {
-    const editor = editorRef.current;
+  const jumpToIssue = useCallback(
+    (issue: ParseIssue) => {
+      const editor = editorRef.current;
 
-    if (!editor) {
-      return;
-    }
+      if (!editor) {
+        return;
+      }
 
-    const position = {
-      lineNumber: issue.line,
-      column: issue.column,
-    };
+      const position = {
+        lineNumber: issue.line,
+        column: issue.column,
+      };
 
-    editor.setPosition(position);
-    editor.revealPositionInCenter(position);
-    editor.focus();
-    setNotice(`已定位到 ${issue.line}:${issue.column}`);
-  }, []);
+      editor.setPosition(position);
+      editor.revealPositionInCenter(position);
+      editor.focus();
+      notifyInfo(`已定位到 ${issue.line}:${issue.column}`);
+    },
+    [notifyInfo],
+  );
 
-  const jumpToTreeNode = useCallback((node: JsonTreeNode) => {
-    const editor = editorRef.current;
-    const model = editor?.getModel();
+  const jumpToTreeNode = useCallback(
+    (node: JsonTreeNode) => {
+      const editor = editorRef.current;
+      const model = editor?.getModel();
 
-    if (!editor || !model) {
-      return;
-    }
+      if (!editor || !model) {
+        return;
+      }
 
-    const position = model.getPositionAt(node.offset);
-    editor.setPosition(position);
-    editor.revealPositionInCenter(position);
-    editor.focus();
-    setNotice(`已定位到 ${node.path}`);
-  }, []);
+      const position = model.getPositionAt(node.offset);
+      editor.setPosition(position);
+      editor.revealPositionInCenter(position);
+      editor.focus();
+      notifyInfo(`已定位到 ${node.path}`);
+    },
+    [notifyInfo],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -725,7 +782,7 @@ function App() {
             className={mode === "json" ? "active" : ""}
             onClick={() => {
               setMode("json");
-              setNotice("已切换到严格 JSON");
+              notifyInfo("已切换到严格 JSON");
             }}
           >
             JSON
@@ -735,7 +792,7 @@ function App() {
             className={mode === "jsonc" ? "active" : ""}
             onClick={() => {
               setMode("jsonc");
-              setNotice("已切换到 JSONC");
+              notifyInfo("已切换到 JSONC");
             }}
           >
             JSONC
@@ -965,9 +1022,9 @@ function App() {
         </span>
         <span>{formatBytes(file.sizeBytes)}</span>
         <span className={isValid ? "status-ok" : "status-error"}>
-          {isValid ? "有效" : "无效"}
+          {isParsePending ? "解析中…" : isValid ? "有效" : "无效"}
         </span>
-        <span className="notice">{notice}</span>
+        <span className={`notice notice-${notice.tone}`}>{notice.message}</span>
       </footer>
     </main>
   );

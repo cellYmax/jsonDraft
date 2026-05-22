@@ -166,7 +166,7 @@ User
 ## 性能假设
 
 - v1 目标文件小于 10MB。
-- 解析在前端同步完成，依赖 React `useMemo` 缓存 `content/mode/cursorOffset` 组合。
+- 解析在前端同步完成，依赖 React `useMemo` 缓存 `(deferredContent, mode, deferredCursorOffset)` 组合，并使用 `useDeferredValue` 把内容/光标延迟，让按键输入保持 UI 流畅。
 - 树形导航限制节点数量，避免深层或宽表结构造成侧栏卡顿。
 - Monaco 自动布局负责编辑器尺寸变化。
 

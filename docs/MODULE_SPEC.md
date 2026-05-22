@@ -198,12 +198,13 @@ type ParseResult = {
 - `cursor`：Monaco 当前行、列和 offset。
 - `recentFiles`：localStorage 中的最近文件，最多 5 条。
 - `treeCollapsed`：树形导航收缩状态。
-- `notice`：底部状态栏提示。
+- `notice`：底部状态栏提示，结构为 `{ tone: "info" | "success" | "error", message: string }`。`success` 和 `info` 在 4s 后自动回到“准备就绪”，`error` 保持显示直到下个动作触发新通知。
 - `editorRef` / `monacoRef`：编辑器实例引用。
 
 ### 派生值
 
-`parseResult` 通过 `useMemo` 从 `file.content`、`mode`、`cursor.offset` 派生。
+- `parseResult` 通过 `useMemo` 从 `useDeferredValue(file.content)`、`mode` 和 `useDeferredValue(cursor.offset)` 派生，使输入过程中保持 UI 流畅。
+- `isParsePending` 在 deferred 与最新输入不一致时为真，状态栏显示“解析中…”。
 
 ### 主要事件
 

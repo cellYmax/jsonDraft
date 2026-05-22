@@ -452,15 +452,19 @@ function errorMessage(code: number): string {
     case PARSE_ERROR.EndOfFileExpected:
       return "根 JSON 值后存在多余内容。";
     case PARSE_ERROR.InvalidCommentToken:
+      return "注释语法无效，严格 JSON 不允许注释。";
     case PARSE_ERROR.UnexpectedEndOfComment:
-      return "注释语法无效。";
-    case PARSE_ERROR.InvalidCharacter:
-    case PARSE_ERROR.InvalidEscapeCharacter:
-    case PARSE_ERROR.InvalidUnicode:
+      return "注释未正确结束。";
     case PARSE_ERROR.UnexpectedEndOfString:
-      return "字符串未正确闭合。";
+      return "字符串未正确闭合，缺少结束引号。";
     case PARSE_ERROR.UnexpectedEndOfNumber:
       return "数字未正确结束。";
+    case PARSE_ERROR.InvalidUnicode:
+      return "字符串包含无效的 Unicode 转义序列。";
+    case PARSE_ERROR.InvalidEscapeCharacter:
+      return "字符串包含无效的转义字符。";
+    case PARSE_ERROR.InvalidCharacter:
+      return "字符串包含无法识别的字符。";
     default:
       return `未知解析错误 (${code})。`;
   }

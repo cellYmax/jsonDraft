@@ -592,3 +592,16 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.notice-info {
+  color: #39413d;
+}
+
+.notice-success {
+  color: #0f766e;
+}
+
+.notice-error {
+  color: #b42318;
+  font-weight: 600;
+}

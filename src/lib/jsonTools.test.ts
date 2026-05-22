@@ -46,6 +46,33 @@ describe("analyzeJson", () => {
     expect(result.issues[0].message).toContain("注释");
   });
 
+  it("reports an unterminated string with a dedicated message", () => {
+    const result = analyzeJson('{\n  "name": "json', "json");
+
+    expect(result.summary.valid).toBe(false);
+    expect(result.issues.map((issue) => issue.message)).toContain(
+      "字符串未正确闭合，缺少结束引号。",
+    );
+  });
+
+  it("reports an invalid unicode escape with a dedicated message", () => {
+    const result = analyzeJson('{"name":"\\uZZZZ"}', "json");
+
+    expect(result.summary.valid).toBe(false);
+    expect(result.issues.map((issue) => issue.message)).toContain(
+      "字符串包含无效的 Unicode 转义序列。",
+    );
+  });
+
+  it("reports an invalid escape character with a dedicated message", () => {
+    const result = analyzeJson('{"name":"oops \\q"}', "json");
+
+    expect(result.summary.valid).toBe(false);
+    expect(result.issues.map((issue) => issue.message)).toContain(
+      "字符串包含无效的转义字符。",
+    );
+  });
+
   it("returns a JSON path for the cursor offset", () => {
     const content = '{\n  "items": [{ "id": 1 }]\n}';
     const offset = content.indexOf("id");
