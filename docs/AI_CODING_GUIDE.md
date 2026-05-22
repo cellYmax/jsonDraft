@@ -34,6 +34,77 @@ jsonDraft 是一个本地桌面 JSON 编辑器：
 - 不要移除 10MB 文件限制，除非同步实现大文件策略。
 - 不要强制重写 README 或 specs 中与当前任务无关的内容。
 
+## 项目约定（必读）
+
+### 中文 UI / 英文代码
+
+- **所有面向用户的文案使用简体中文** —— UI 标签、toast、错误信息（包括 Rust 返回的）、文档。
+- **所有标识符、注释、commit message 使用英文。**
+- 新增功能时，中文文案沿用 `docs/PRODUCT_SPEC.md` 的语气（简洁、中性、技术化）。
+
+Rust 端中文错误示例：
+
+```rust
+"无法读取文件：{path}"
+"文件超过 10MB，v1 暂不支持打开。"
+```
+
+### CANCELLED 是 sentinel，不是错误
+
+Tauri 文件对话框命令在用户取消时返回**字符串字面量 `"CANCELLED"`**，**不会抛异常**。前端 handler 必须显式判断并提示“操作已取消”。
+
+```ts
+const result = await invoke<string>("save_json_file_as", { content });
+if (result === "CANCELLED") { /* 取消提示 */ return; }
+```
+
+### Rust ↔ JS 命名通过 Serde
+
+所有跨边界 Rust 结构使用：
+
+```rust
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FilePayload { file_path: String, file_name: String, ... }
+```
+
+JS 收到的是 `{ filePath, fileName }`。TypeScript 类型中**不要**用 snake_case 键。
+
+### 文件大小限制只在 Rust 强制
+
+`MAX_FILE_BYTES = 10 * 1024 * 1024` 由 **Rust 端**校验，前端不要重复校验，直接让 Rust 错误冒泡到 UI。
+
+### 状态变更必须走 helper
+
+`FileState` 是单一事实来源。所有状态转换必须经过 `src/lib/fileState.ts` 中的纯函数：
+
+- `createDemoFileState()` / `createBlankFileState()` —— 初始态
+- `fileStateFromPayload(payload)` —— Rust I/O 之后
+- `updateFileContent(state, content)` —— 编辑器变更
+- `markSaved(state, savedContent)` —— 写入成功后（含 save-race 处理）
+
+**不要在 `App.tsx` 中直接 inline 修改 `FileState`**，永远调用 helper。
+
+### useMemo 派生模式
+
+`parseResult` 通过 `useMemo` 从 `(content, mode, cursorOffset)` 派生。新增影响解析/分析的状态时，扩展这个依赖元组——**不要**新建并行的 `useEffect`。
+
+### 启动必有示例
+
+应用**永远不能以空白编辑器启动**。`createDemoFileState()` 通过 Vite 的 `?raw` query 导入 `examples/customer-profile.json` 作为初始状态。如果改这个默认，必须同步 `docs/PRODUCT_SPEC.md`。
+
+### 树截断
+
+JSON 树形导航上限为 `MAX_TREE_NODES = 250`。`ParseResult` 返回 `treeTruncated: boolean`，UI 在 true 时显示截断提示。
+
+### 文档是契约
+
+`docs/*.md` 描述当前事实，不是规划。改行为时：
+
+1. 更新相关 SPEC：`PRODUCT_SPEC`、`ARCHITECTURE_SPEC`、`MODULE_SPEC`、`TEST_SPEC`。
+2. 更新文档头部日期。
+3. 本文 “常见任务定位” 表是 “该改哪个文件” 的权威查表。
+
 ## 常用开发命令
 
 ```bash
@@ -43,6 +114,8 @@ pnpm run build
 cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 cargo run --package json-draft --bin json-draft
 ```
+
+完整命令列表见 `docs/TEST_SPEC.md` 顶部和 `package.json` scripts。
 
 ## 推荐改动流程
 

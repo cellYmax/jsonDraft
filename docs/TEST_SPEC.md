@@ -2,7 +2,58 @@
 
 最后更新：2026-05-22
 
-## 测试命令
+## 测试与开发命令
+
+包管理器为 `pnpm`（见 `pnpm-lock.yaml`）。
+
+### 前端
+
+| 命令 | 说明 |
+| --- | --- |
+| `pnpm run dev` | 启动 Vite dev server（端口 1420，浏览器，无 Tauri 壳）。 |
+| `pnpm run preview` | 预览生产前端构建。 |
+| `pnpm run build` | `tsc`（类型检查，不产出）+ `vite build`，是事实上的“能否编译”检查。 |
+
+### 桌面（Tauri）
+
+| 命令 | 说明 |
+| --- | --- |
+| `pnpm run tauri dev` | 启动完整桌面应用（Rust 后端 + Vite HMR）。 |
+| `pnpm run tauri build` | 产出生产桌面安装包。 |
+| `pnpm run tauri` | 透传到 Tauri CLI。 |
+
+### 测试
+
+| 命令 | 说明 |
+| --- | --- |
+| `pnpm test` | 一次性 Vitest 运行（CI 模式）。 |
+| `pnpm run test:watch` | 监听模式（TDD）。 |
+| `pnpm test src/lib/jsonTools.test.ts` | 跑单个文件。 |
+| `pnpm test -t "format"` | 按测试名过滤。 |
+
+### Rust / 后端
+
+`src-tauri/` 没有 `cargo` 脚本写进 `package.json`，直接调用：
+
+```bash
+cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
+cargo run --package json-draft --bin json-draft --manifest-path src-tauri/Cargo.toml
+```
+
+crate 名为 `json-draft`，库目标重命名为 `json_draft_lib`（避免 Windows 二进制/库重名冲突）。
+
+### Lint / Format
+
+**未配置**。仓库无 ESLint、Prettier、Biome 配置。代码质量仅依赖 TypeScript strict：
+
+- `strict: true`
+- `noUnusedLocals: true`
+- `noUnusedParameters: true`
+- `noFallthroughCasesInSwitch: true`
+
+`pnpm run build`（包含 `tsc`）是事实上的 lint。
+
+### 推荐 pre-commit 序列
 
 ```bash
 pnpm test
@@ -12,10 +63,26 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 
 日常开发建议：
 
-- 改 `src/lib/*.ts`：至少运行 `pnpm test`。
-- 改 React UI：至少运行 `pnpm run build`，并手工打开界面验证。
-- 改 Tauri Rust：至少运行 `cargo check --package json-draft --manifest-path src-tauri/Cargo.toml`。
-- 改文件 IO：需要在 Tauri 应用中手工验证打开、保存、另存为。
+- 改 `src/lib/*.ts`：至少 `pnpm test`。
+- 改 React UI：至少 `pnpm run build`，并手工打开界面验证。
+- 改 Tauri Rust：至少 `cargo check`。
+- 改文件 IO：必须在 Tauri 应用中手工验证打开、保存、另存为。
+
+## 测试框架与约定
+
+- **Vitest 4.1.6** 作为 test runner。
+- **jsdom** 作为 DOM 环境。
+- **Testing Library**（`@testing-library/react`、`jest-dom`、`user-event`）已安装但**目前没有 React 组件测试**，属于待补能力。
+- 测试配置 inline 在 `vite.config.ts` 的 `test:` 字段（无独立 `vitest.config.ts`）：
+
+  ```ts
+  test: { environment: "jsdom", globals: true }
+  ```
+
+- `globals: true`：直接使用 `describe`、`it`、`expect`，无需 import。
+- 测试与源码**同目录**，命名 `<module>.test.ts`。
+- **无 fixtures 目录**：内联测试数据；演示内容通过 `?raw` 从 `examples/` 引入。
+- 新增 JSON 转换函数时，**必须**同步加 `*.test.ts` 用例（见 `docs/MODULE_SPEC.md` 契约）。
 
 ## 现有单测覆盖
 

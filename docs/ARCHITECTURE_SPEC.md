@@ -12,6 +12,37 @@
 - 图标：`lucide-react`
 - 测试：Vitest
 
+## 两层结构概览
+
+```text
+┌──────────────────────────────────────────────────┐
+│  React Frontend (src/)                           │
+│  - All JSON business logic                       │
+│  - All UI state, dirty tracking, mode switching  │
+│  - Recent files, tree nav, JSONPath, diagnostics │
+└──────────────────────────────────────────────────┘
+                  ↕ tauri.invoke
+┌──────────────────────────────────────────────────┐
+│  Rust Backend (src-tauri/)  — thin I/O only      │
+│  - File I/O only (open/save dialogs + read/write)│
+│  - 10MB hard limit                               │
+│  - Returns "CANCELLED" sentinel on user cancel   │
+└──────────────────────────────────────────────────┘
+```
+
+**关键规则：** JSON 解析或转换永远不写在 Rust。所有业务逻辑保留在 `src/lib/`，纯函数、可测。
+
+## Tauri Commands 一览
+
+| Command | 用途 |
+| --- | --- |
+| `open_json_file()` | 弹出打开对话框，读文件（≤10MB），返回 `FilePayload` |
+| `open_json_file_at(path)` | 按已知路径读文件（最近文件用） |
+| `save_json_file(path, content)` | 写入已知路径 |
+| `save_json_file_as(content)` | 弹出保存对话框，写入 |
+
+所有跨边界结构使用 `#[serde(rename_all = "camelCase")]`，JS 收到的是 `{ filePath, fileName, content, sizeBytes }`。详细行为见 `docs/MODULE_SPEC.md`。
+
 ## 目录职责
 
 ```text

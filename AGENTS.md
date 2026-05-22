@@ -32,19 +32,14 @@ pnpm test
 pnpm run build
 ```
 
-## Progressive Disclosure
+## Documentation Map
 
-For detailed information, consult these documents as needed:
+All authoritative project documentation lives under `docs/`:
 
-- `docs/agent/development_commands.md` — All build, test, Tauri, and Rust commands
-- `docs/agent/architecture.md` — Two-layer split, data flow, core invariants
-- `docs/agent/testing.md` — Vitest setup, coverage areas, test conventions
-- `docs/agent/conventions.md` — Project-specific patterns (Chinese copy, sentinels, etc.)
+- `docs/PRODUCT_SPEC.md` — v1 scope, user flows, acceptance criteria, non-goals.
+- `docs/ARCHITECTURE_SPEC.md` — Two-layer split (Rust/React), data flow, security, invariants, Tauri commands overview.
+- `docs/MODULE_SPEC.md` — Core types, Tauri command details, `jsonTools` / `fileState` / `App` APIs, extension points.
+- `docs/TEST_SPEC.md` — All build/test commands, Vitest setup, unit-test coverage, manual regression checklist, risk matrix.
+- `docs/AI_CODING_GUIDE.md` — **Authoritative starting point for AI assistants.** Project conventions (Chinese UI, CANCELLED sentinel, serde camelCase, FileState helpers, etc.), task→file lookup, change-flow templates.
 
-The project also has comprehensive specs in `docs/`:
-- `docs/PRODUCT_SPEC.md` — v1 scope and acceptance criteria
-- `docs/ARCHITECTURE_SPEC.md` — full architecture spec
-- `docs/MODULE_SPEC.md` — core types and module APIs
-- `docs/AI_CODING_GUIDE.md` — explicit AI assistant rules and task→file mapping
-
-**When working on a task, first determine which documentation is relevant, then read only those files.** For non-trivial changes, `docs/AI_CODING_GUIDE.md` is the authoritative starting point.
+**When working on a task, start from `docs/AI_CODING_GUIDE.md`, then read only the SPEC(s) relevant to your change.**
