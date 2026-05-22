@@ -129,6 +129,22 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - `addRecentFile` 把新条目置顶并按 path 去重。
 - `removeRecentFile` 移除目标 path，path 不存在时返回等价副本。
 
+### `src/lib/jsonDiff.test.ts`
+
+覆盖：
+
+- 相同基本类型返回空数组。
+- 不同基本类型返回单条根级 `changed`。
+- 对象 vs 数组等异类型返回单条根级 `changed`，不深入。
+- 对象按左序优先 + 右侧新增遍历。
+- 嵌套对象按 `$.user.age` 路径定位。
+- 数组按下标对齐，长度不同时多余项视为 added。
+- `null` vs 缺失视为 `removed`。
+- 非 dot-safe 键使用 `["..."]`。
+- 键序不同但值结构相同视为相等。
+- `0` vs `-0` 视为 `changed`。
+- `summarizeDiff` 按 kind 计数，`unchanged` 不计入。
+
 ## 手工验证清单
 
 ### 启动与首屏
@@ -178,6 +194,16 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 - 树形导航搜索框可按 label / path / preview 过滤；输入无匹配时显示“没有匹配节点”。
 - 编辑器内光标所在节点出现柔和绿色背景高亮；光标移到根节点之外的任意子节点都能正确刷新；JSON 无效时高亮消失；切回有效后恢复。
 
+### JSON Diff
+
+- 工具栏 Diff 按钮可打开/关闭 Diff 面板；状态栏出现“已打开/关闭 Diff 视图”通知。
+- 进入 Diff 时左侧自动填入当前编辑器内容，右侧空白；关闭后回到编辑器内容不丢。
+- “互换” 按钮可一键互换左右内容。
+- 任一侧无效 JSON 时下方提示“两侧都是合法 JSON 后才会展示差异。”，并在输入区头部显示“JSON 无法解析”。
+- 两侧都合法时按结构化方式列出差异；改动键序但值结构一致显示“两侧 JSON 完全一致。”。
+- 数组按下标对齐；对象 key 顺序不影响差异。
+- 含特殊字符的键（如 `a-b`）路径形式为 `$["a-b"]`。
+
 ### 保存与原子写
 
 - 保存到只读目录或不存在目录时返回中文错误，不留下临时文件。
@@ -199,12 +225,14 @@ cargo check --package json-draft --manifest-path src-tauri/Cargo.toml
 | `lib/jsonTools.ts` | 模式解析错误、Path 错误、转换丢内容 | `pnpm test` |
 | `lib/fileState.ts` | dirty 状态错误、保存后基线错误 | `pnpm test` |
 | `lib/recentFiles.ts` | 损坏 JSON 崩溃、最近文件丢失 | `pnpm test` |
+| `lib/jsonDiff.ts` | 误报相等、漏报差异、路径错误 | `pnpm test` |
 | `lib/clipboard.ts` | 剪贴板写入失败 | 手工浏览器/Tauri 复制 |
 | `hooks/useShortcuts.ts` | 快捷键失效、与浏览器冲突 | `pnpm run build` + 手工 |
 | `hooks/useNotice.ts` | 通知不消失或错误被自动清除 | 手工触发各 tone |
 | `hooks/usePathHighlight.ts` | 高亮卡在旧节点 / 切换文件后未清理 / 整文档变色 | 手工移动光标、切换有效/无效 |
 | `hooks/useCloseProtection.ts` | dirty 被静默丢弃 | Tauri 手工关窗 |
 | `components/TreePanel.tsx` | 折叠/搜索/滚动失效 | `pnpm run build` + 手工 |
+| `components/DiffPanel.tsx` | 输入解析卡顿、互换丢失内容、列表崩溃 | `pnpm run build` + 手工 Diff 切换 |
 | `App.tsx` 命令编排 | 未保存内容丢失、保存竞态 | `pnpm run build` + 手工文件操作 |
 | `src-tauri/src/lib.rs` | 文件读写失败、权限缺失 | `cargo check` + Tauri 手工检查 |
 | `App.css` | 布局溢出、状态栏遮挡 | 浏览器/Tauri 多尺寸检查 |

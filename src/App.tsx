@@ -6,6 +6,7 @@ import "./App.css";
 import { Sidebar } from "./components/Sidebar";
 import { StatusBar } from "./components/StatusBar";
 import { Toolbar } from "./components/Toolbar";
+import { DiffPanel } from "./components/DiffPanel";
 import { useCloseProtection } from "./hooks/useCloseProtection";
 import { useNotice } from "./hooks/useNotice";
 import { usePathHighlight } from "./hooks/usePathHighlight";
@@ -89,6 +90,8 @@ function App() {
   const [recentFiles, setRecentFiles] = useState<RecentFile[]>(() =>
     loadRecentFiles(),
   );
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffSeed, setDiffSeed] = useState<string>("");
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const [editorInstance, setEditorInstance] =
@@ -459,6 +462,24 @@ function App() {
     [notifyInfo],
   );
 
+  const toggleDiff = useCallback(() => {
+    setDiffOpen((current) => {
+      const next = !current;
+      if (next) {
+        setDiffSeed(file.content);
+        notifyInfo("已打开 Diff 视图");
+      } else {
+        notifyInfo("已关闭 Diff 视图");
+      }
+      return next;
+    });
+  }, [file.content, notifyInfo]);
+
+  const closeDiff = useCallback(() => {
+    setDiffOpen(false);
+    notifyInfo("已关闭 Diff 视图");
+  }, [notifyInfo]);
+
   const shortcutHandlers = useMemo(
     () => ({
       onNew: newBlankFile,
@@ -506,6 +527,7 @@ function App() {
         fileDirty={file.dirty}
         isValid={isValid}
         mode={mode}
+        diffOpen={diffOpen}
         onNewBlankFile={newBlankFile}
         onOpenFile={() => {
           void openFile();
@@ -522,22 +544,27 @@ function App() {
         onEscape={escapeContent}
         onUnescape={unescapeContent}
         onModeChange={handleModeChange}
+        onToggleDiff={toggleDiff}
       />
 
       <section className="workspace">
-        <div className="editor-pane">
-          <Editor
-            beforeMount={beforeMount}
-            height="100%"
-            language="json"
-            onChange={onEditorChange}
-            onMount={onMount}
-            options={editorOptions}
-            path={file.path ?? file.name}
-            theme="vs"
-            value={file.content}
-          />
-        </div>
+        {diffOpen ? (
+          <DiffPanel initialLeft={diffSeed} onClose={closeDiff} />
+        ) : (
+          <div className="editor-pane">
+            <Editor
+              beforeMount={beforeMount}
+              height="100%"
+              language="json"
+              onChange={onEditorChange}
+              onMount={onMount}
+              options={editorOptions}
+              path={file.path ?? file.name}
+              theme="vs"
+              value={file.content}
+            />
+          </div>
+        )}
 
         <Sidebar
           mode={mode}

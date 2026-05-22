@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   FileJson,
   FolderOpen,
   Minimize2,
@@ -16,6 +17,7 @@ type ToolbarProps = {
   fileDirty: boolean;
   isValid: boolean;
   mode: JsonMode;
+  diffOpen: boolean;
   onNewBlankFile: () => void;
   onOpenFile: () => void;
   onSaveFile: () => void;
@@ -26,6 +28,7 @@ type ToolbarProps = {
   onEscape: () => void;
   onUnescape: () => void;
   onModeChange: (next: JsonMode) => void;
+  onToggleDiff: () => void;
 };
 
 export function Toolbar({
@@ -33,6 +36,7 @@ export function Toolbar({
   fileDirty,
   isValid,
   mode,
+  diffOpen,
   onNewBlankFile,
   onOpenFile,
   onSaveFile,
@@ -43,6 +47,7 @@ export function Toolbar({
   onEscape,
   onUnescape,
   onModeChange,
+  onToggleDiff,
 }: ToolbarProps) {
   return (
     <header className="toolbar">
@@ -111,6 +116,16 @@ export function Toolbar({
         <button type="button" onClick={onUnescape} title="去除转义">
           <RotateCcw size={17} aria-hidden="true" />
           去转义
+        </button>
+        <span className="toolbar-divider" aria-hidden="true" />
+        <button
+          type="button"
+          onClick={onToggleDiff}
+          className={diffOpen ? "active" : ""}
+          title={diffOpen ? "关闭 Diff" : "打开 Diff 比较"}
+        >
+          <ArrowLeftRight size={17} aria-hidden="true" />
+          Diff
         </button>
       </div>
 

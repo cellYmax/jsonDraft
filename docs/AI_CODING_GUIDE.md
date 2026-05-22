@@ -168,6 +168,7 @@ jsonDraft 现在出现 [现象]。
 | 关闭确认 | `src/hooks/useCloseProtection.ts` |
 | 快捷键 | `src/hooks/useShortcuts.ts` |
 | 路径范围高亮 | `src/hooks/usePathHighlight.ts`, `currentRange` in `jsonTools.ts` |
+| JSON Diff | `src/lib/jsonDiff.ts`, `src/components/DiffPanel.tsx`, `App.tsx` toggleDiff |
 | 工具栏按钮 | `src/components/Toolbar.tsx` |
 | 状态栏 | `src/components/StatusBar.tsx` |
 | 侧栏面板 | `src/components/Sidebar.tsx` 装配 + `*Panel.tsx` 子组件 |

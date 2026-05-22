@@ -205,6 +205,36 @@ type ParseResult = {
 - 查询大小写不敏感，匹配节点 `label`、`path` 或 `preview` 任一字段包含子串。
 - 不构建新的层级，调用方负责按返回顺序渲染。
 
+## `jsonDiff.ts`
+
+提供结构化 JSON 差异对比的纯函数。
+
+### `DiffEntry`
+
+```ts
+type DiffKind = "added" | "removed" | "changed" | "unchanged";
+
+type DiffEntry = {
+  path: string;       // 形如 "$.users[0].name" 或 '$["a-b"]'
+  kind: DiffKind;
+  leftValue: unknown;
+  rightValue: unknown;
+};
+```
+
+### `diffJson(left, right) -> DiffEntry[]`
+
+- 递归对齐：对象按 key（左序优先 + 右侧新增），数组按下标。
+- 类型不同（如对象 vs 数组）记录为单条 `changed`，不再深入。
+- `null` 与缺失视为不同：`{a: null}` vs `{}` 产生 `removed` 条目。
+- 完全相同时返回空数组。
+- 不返回 `unchanged`；该 kind 仅用于调用方扩展。
+- 路径段使用 `pathFromSegments`：数字下标 `[i]`，dot-safe key 用 `.key`，其余 `["key"]`。
+
+### `summarizeDiff(entries) -> { added, removed, changed }`
+
+- 按 kind 计数；`unchanged` 不计入。
+
 ## `App.tsx`
 
 `App.tsx` 是顶层装配点：维护文件/光标/最近文件状态，编排 Tauri commands，把派生值和回调向下传给 `Toolbar` / `Sidebar` / `StatusBar`。所有副作用（关闭保护、快捷键、通知 auto-clear）通过自定义 hook 隔离。
@@ -215,6 +245,8 @@ type ParseResult = {
 - `mode`：`json` 或 `jsonc`。
 - `cursor`：Monaco 当前行、列和 offset。
 - `recentFiles`：localStorage 中的最近文件，最多 5 条；通过 `lib/recentFiles.ts` 读写。
+- `diffOpen`：是否在中心区显示 Diff 面板。开启时编辑器卸载，关闭时恢复。
+- `diffSeed`：进入 Diff 视图时拍快照的当前编辑器内容，作为 DiffPanel 左侧初值。
 - `editorRef` / `monacoRef`：编辑器实例引用，供命令式 API（光标移动、Reveal）使用。
 - `editorInstance`：Monaco 实例的 state 副本，供 `usePathHighlight` 这类需要在挂载后触发 effect 的 hook 订阅。
 
@@ -244,6 +276,8 @@ type ParseResult = {
 - `jumpToIssue()`：跳转解析错误。
 - `jumpToTreeNode()`：跳转树节点。
 - `handleModeChange()`：切换 JSON/JSONC，并通过 `notifyInfo` 反馈。
+- `toggleDiff()`：在编辑器与 Diff 面板间切换；进入时把当前 `file.content` 写入 `diffSeed`。
+- `closeDiff()`：从 DiffPanel 内部触发的关闭。
 
 ### 快捷键
 
@@ -262,11 +296,12 @@ type ParseResult = {
 
 每个组件只接收必要的派生值和回调，不直接 invoke Tauri 命令。
 
-- `Toolbar`：文件/转换/模式按钮；接收 `filePath`、`fileDirty`、`isValid`、`mode` 和回调。
+- `Toolbar`：文件/转换/模式按钮 + Diff 切换按钮；接收 `filePath`、`fileDirty`、`isValid`、`mode`、`diffOpen` 和回调。
 - `StatusBar`：dirty 点、文件名、保存状态、光标、大小、有效性、通知（按 tone 着色）。
 - `Sidebar`：纯装配组件，把 props 分发到下面的子面板。
 - `HealthPanel` / `IssuePanel` / `SummaryPanel` / `CurrentPathPanel` / `CopyPanel` / `RecentFilesPanel`：单一职责面板。
 - `TreePanel`：自管 `collapsed`、`search` 和 DOM `Map`；监听 `currentPath` 变化触发 `scrollIntoView({ block: "nearest" })`。
+- `DiffPanel`：中心区 Diff 面板。自管两个 `<textarea>` 输入、JSONC 容错解析（用 `parse` + `allowTrailingComma`），调用 `diffJson` / `summarizeDiff` 渲染差异列表；`onClose` 由 App 传入。
 
 ## Hooks (`src/hooks/`)
 

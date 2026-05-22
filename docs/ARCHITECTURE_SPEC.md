@@ -52,7 +52,7 @@ src/
   ErrorBoundary.tsx             # React 错误兜底
   main.tsx                      # 前端入口
   components/
-    Toolbar.tsx                 # 顶部工具栏：文件/转换/模式按钮
+    Toolbar.tsx                 # 顶部工具栏：文件/转换/模式/Diff 切换按钮
     StatusBar.tsx               # 底部状态栏
     Sidebar.tsx                 # 右侧侧栏装配
     HealthPanel.tsx             # 校验健康面板
@@ -62,13 +62,16 @@ src/
     CurrentPathPanel.tsx        # 当前 JSON Path
     CopyPanel.tsx               # 快速复制
     RecentFilesPanel.tsx        # 最近文件
+    DiffPanel.tsx               # 中心区 JSON Diff 视图
   hooks/
     useNotice.ts                # Notice 状态 + auto-clear
     useCloseProtection.ts       # 浏览器/Tauri 关闭保护
     useShortcuts.ts             # 全局键盘快捷键
+    usePathHighlight.ts         # 当前 JSON 节点 Monaco 范围高亮
   lib/
     fileState.ts                # 文件状态、dirty 判断、大小格式化、保存合并
     jsonTools.ts                # JSON/JSONC 解析、格式化、压缩、树、过滤
+    jsonDiff.ts                 # 结构化 JSON Diff 纯函数
     recentFiles.ts              # localStorage 最近文件读写、增删
     clipboard.ts                # Tauri / 浏览器双路径剪贴板写入
 src-tauri/
